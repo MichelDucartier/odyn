@@ -1,6 +1,4 @@
-use crate::bitboard;
-use smallvec::{smallvec, SmallVec};
-use std::fmt::{format, write};
+use crate::game::bitboard;
 
 use super::bitboard::Bitboard;
 

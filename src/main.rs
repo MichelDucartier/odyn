@@ -1,9 +1,7 @@
-mod constants;
-mod game;
+use odyn::constants;
+use odyn::game::utility;
 
-use game::utility;
-
-use crate::game::bitboard;
+use odyn::game::bitboard;
 
 fn main() {
     let bboard = bitboard::Bitboard::from_fen(&constants::START_FEN, " ");
