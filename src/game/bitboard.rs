@@ -3,7 +3,7 @@ use smallvec::{smallvec, SmallVec};
 use super::utility;
 use crate::constants::{BLACK_VALUE, WHITE_VALUE};
 use core::panic;
-use std::{ascii::AsciiExt, collections::HashMap};
+use std::collections::HashMap;
 
 #[derive(Debug, Default)]
 pub struct Bitboard {
@@ -50,9 +50,8 @@ impl Bitboard {
         bitboard.load_castle_rights(s_castle);
 
         // Load en_passant
-        if let Some((row, col)) = utility::string_to_square(s_enpassant) {
-            let board_index = utility::square_to_index(row, col);
-            bitboard.en_passant |= 1 << board_index;
+        if let Some((_row, col)) = utility::string_to_square(s_enpassant) {
+            bitboard.en_passant |= 1 << col;
         }
 
         return bitboard;
@@ -82,10 +81,11 @@ impl Bitboard {
             return "-".to_string();
         }
 
-        let current_turn: u8 = (self.en_passant >> 4) & 0b1;
+        let current_turn: u8 = (self.flags >> 4) & 0b1;
         let col = self.en_passant.trailing_zeros();
 
-        let row = if current_turn == WHITE_VALUE { 5 } else { 2 };
+        // If current turn is white then it's black's pawn that can be taken in en passant
+        let row = if current_turn == WHITE_VALUE { 2 } else { 5 };
 
         return utility::square_to_string(row, col);
     }
@@ -106,6 +106,11 @@ impl Bitboard {
             }
         }
 
+        // Handle case when no castle rights
+        if s.len() == 0 {
+            return "-".to_string();
+        }
+
         return s;
     }
 
@@ -123,7 +128,7 @@ impl Bitboard {
 
         let mut blank = 0;
 
-        for i in 0..64 {
+        'outer: for i in 0..64 {
             if i % 8 == 0 && i != 0 {
                 if blank != 0 {
                     s.push_str(&blank.to_string());
@@ -131,7 +136,6 @@ impl Bitboard {
                 s.push_str("/");
 
                 blank = 0;
-                continue;
             }
 
             // Add piece to the final string if needed
@@ -145,11 +149,11 @@ impl Bitboard {
                     if utility::extract_bit(self.white_board, i) == 1 {
                         let upper_case = (*char).to_ascii_uppercase();
                         s.push(upper_case);
-                        continue;
+                        continue 'outer;
                     }
 
                     s.push(*char);
-                    continue;
+                    continue 'outer;
                 }
             }
 

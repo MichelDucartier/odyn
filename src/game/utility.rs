@@ -19,7 +19,7 @@ pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
 
     // Return None if the second character is not a digit
     if let Some(d) = digit_value {
-        Some((alphabet_index, d))
+        Some((d, alphabet_index))
     } else {
         None
     }
@@ -36,10 +36,10 @@ pub fn index_to_square(index: u32) -> (u32, u32) {
 }
 
 pub fn square_to_string(row: u32, col: u32) -> String {
-    let str_col = std::char::from_u32(col - ('a' as u32)).unwrap();
-    return format!("{}{}", 8 - row, str_col);
+    let str_col = std::char::from_u32(col + ('a' as u32)).unwrap();
+    return format!("{}{}", str_col, 8 - row);
 }
 
 pub fn extract_bit(bits: u64, index: u8) -> u64 {
-    (bits >> index) & 0b1
+    return (bits >> index) & 0b1;
 }
