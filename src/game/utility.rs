@@ -43,3 +43,11 @@ pub fn square_to_string(row: u32, col: u32) -> String {
 pub fn extract_bit(bits: u64, index: u8) -> u64 {
     return (bits >> index) & 0b1;
 }
+
+pub fn west_one(bits: u64) -> u64 {
+    return bits >> 1;
+}
+
+pub fn east_one(bits: u64) -> u64 {
+    return bits << 1;
+}
