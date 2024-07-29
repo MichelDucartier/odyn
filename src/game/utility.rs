@@ -1,3 +1,5 @@
+use crate::constants;
+
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     // Check if the input string has exactly 2 characters
     if s.len() != 2 {
@@ -45,9 +47,17 @@ pub fn extract_bit(bits: u64, index: u8) -> u64 {
 }
 
 pub fn west_one(bits: u64) -> u64 {
-    return bits >> 1;
+    return (bits & !constants::A_FILE) >> 1;
 }
 
 pub fn east_one(bits: u64) -> u64 {
-    return bits << 1;
+    return (bits & !constants::H_FILE) << 1;
+}
+
+pub fn north_one(bits: u64) -> u64 {
+    return bits >> 8;
+}
+
+pub fn south_one(bits: u64) -> u64 {
+    return bits << 8;
 }
