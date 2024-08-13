@@ -1,4 +1,9 @@
-use odyn::game::utility;
+use std::collections::HashSet;
+
+use odyn::{
+    assert_eq_u8,
+    game::utility::{self, board_to_rook_ranks, rook_rank_to_board},
+};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use crate::common::formatting::assert_eq_bitboard;
@@ -116,3 +121,54 @@ fn test_north_one_no_overflow() {
     let res = utility::north_one(bitboard);
     assert_eq_bitboard!(0, res);
 }
+
+#[test]
+fn test_flip_diag_a8h1() {
+    let board: u64 = 0b11110000;
+    let expected: u64 = 0x0101010100000000;
+
+    assert_eq_bitboard!(expected, utility::flip_diag_a8h1(board))
+}
+
+#[test]
+fn test_enumerate_subsets() {
+    let board: u64 = 0b00001101;
+    let expected: Vec<u64> = vec![
+        0b00001101, 0b00001000, 0b00001100, 0b00001001, 0b00000101, 0b00000001, 0b00000100,
+        0b00000000,
+    ];
+
+    let expected: HashSet<u64> = HashSet::from_iter(expected.iter().cloned());
+    let result: HashSet<u64> =
+        HashSet::from_iter(utility::enumerate_subsets(board).iter().cloned());
+
+    assert_eq!(expected, result);
+}
+
+#[test]
+fn test_rook_rank_to_board() {
+    let row_rank = 0b00011001;
+    let col_rank = 0b11010010;
+    let rook_index = 35;
+
+    let result = utility::rook_rank_to_board(row_rank, col_rank, rook_index);
+    let expected = 0b0000100000001000000000000001100100000000000000000000100000000000;
+
+    assert_eq_bitboard!(expected, result);
+}
+
+#[test]
+fn test_board_to_rook_ranks() {
+    let rook_index = 45;
+    let board = 0b0010000000000000101010110010000000000000001000000000000000100000;
+
+    let col_expected = 0b10110101;
+    let row_expected = 0b10101011;
+
+    let (row, col) = board_to_rook_ranks(board, rook_index);
+
+    assert_eq_u8!(row_expected, row);
+    assert_eq_u8!(col_expected, col);
+}
+
+// 0010000000000000101010110010000000000000001000000000000000100000

@@ -1,4 +1,6 @@
-use crate::constants;
+use bit_reverse::ParallelReverse;
+
+use crate::constants::{self, A_FILE, H_FILE, RANK_1, RANK_8};
 
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     // Check if the input string has exactly 2 characters
@@ -60,4 +62,99 @@ pub fn north_one(bits: u64) -> u64 {
 
 pub fn south_one(bits: u64) -> u64 {
     return bits << 8;
+}
+
+pub fn mask_row_col(board: u64, row: i32, col: i32) -> u64 {
+    board & (A_FILE >> row) & (RANK_1 >> col)
+}
+
+pub fn flip_vertical(board: u64) -> u64 {
+    board.swap_bits()
+}
+
+pub fn flip_diag_a8h1(board: u64) -> u64 {
+    let mut x = board;
+
+    const K1: u64 = 0x5500550055005500;
+    const K2: u64 = 0x3333000033330000;
+    const K4: u64 = 0x0f0f0f0f00000000;
+    let t = K4 & (x ^ (x << 28));
+    x ^= t ^ (t >> 28);
+    let t = K2 & (x ^ (x << 14));
+    x ^= t ^ (t >> 14);
+    let t = K1 & (x ^ (x << 7));
+    x ^= t ^ (t >> 7);
+
+    return x;
+}
+
+pub fn flip_diag_a1h8(board: u64) -> u64 {
+    let mut x = board;
+    let mut t: u64 = x ^ (x << 36);
+
+    let k1: u64 = 0xaa00aa00aa00aa00;
+    let k2: u64 = 0xcccc0000cccc0000;
+    let k4: u64 = 0xf0f0f0f00f0f0f0f;
+    x ^= k4 & (t ^ (x >> 36));
+    t = k2 & (x ^ (x << 18));
+    x ^= t ^ (t >> 18);
+    t = k1 & (x ^ (x << 9));
+    x ^= t ^ (t >> 9);
+    return x;
+}
+
+pub fn enumerate_subsets(board: u64) -> Vec<u64> {
+    let mut res = Vec::new();
+
+    let mut current: i64 = 0;
+    let board: i64 = board.try_into().unwrap();
+
+    loop {
+        res.push(current.try_into().unwrap());
+        current = (current - board) & board;
+
+        if current == 0 {
+            break;
+        }
+    }
+
+    res
+}
+
+pub fn rook_rank_to_board(row_rank: u8, col_rank: u8, rook_index: u32) -> u64 {
+    let col_rank: u64 = col_rank.into();
+    let row_rank: u64 = row_rank.into();
+
+    let (row, col) = index_to_square(rook_index);
+    (flip_diag_a8h1(col_rank) << col) | (row_rank << (8 * row))
+}
+
+pub fn board_to_rook_ranks(board: u64, rook_index: u32) -> (u8, u8) {
+    let (row, col) = index_to_square(rook_index);
+
+    let row_rank: u8 = ((board >> (8 * row)) & 0xff).try_into().unwrap();
+    let col_rank: u8 = (flip_diag_a8h1(board >> col) & 0xff).try_into().unwrap();
+
+    (row_rank, col_rank)
+}
+
+pub fn relevant_rook_blocking(board: u64, rook_index: u32) -> u64 {
+    let (row_rank, col_rank) = board_to_rook_ranks(board, rook_index);
+    rook_rank_to_board(row_rank, col_rank, rook_index) & !A_FILE & !H_FILE & !RANK_1 & !RANK_8
+}
+
+pub fn format_bitboard(bitboard: u64) -> String {
+    let mut s = "".to_owned();
+
+    for i in 0..64 {
+        let bit = extract_bit(bitboard, i);
+
+        if (i % 8) == 0 && i != 0 {
+            s.push_str("\n");
+        }
+
+        s.push_str(&bit.to_string());
+    }
+
+    return s;
 }

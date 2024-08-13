@@ -1,6 +1,5 @@
-use crate::game::bitboard;
-
 use super::bitboard::Bitboard;
+use crate::game::bitboard;
 
 #[derive(Default, Debug)]
 pub struct Chessboard {
