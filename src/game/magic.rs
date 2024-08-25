@@ -67,7 +67,7 @@ fn generate_magic_lt(
 
         let blockers_list = utility::enumerate_subsets(relevant_subset);
 
-        assert!(blockers_list.len() <= 4096);
+        assert!(blockers_list.len() <= LOOKUP_SIZE);
 
         // Loop until a perfect magic number is found
         loop {

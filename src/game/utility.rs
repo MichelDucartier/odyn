@@ -1,12 +1,6 @@
-use std::usize;
-
-use bit_reverse::ParallelReverse;
-use const_for::const_for;
-use ilog::IntLog;
-
-use crate::constants::{self, A_FILE, H_FILE, RANK_1, RANK_8};
-
 use super::magic::{self, BISHOP_LOOKUP, ROOK_LOOKUP};
+use crate::constants::{self, A_FILE, H_FILE, RANK_1, RANK_8};
+use bit_reverse::ParallelReverse;
 
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     // Check if the input string has exactly 2 characters

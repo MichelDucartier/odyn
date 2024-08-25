@@ -23,5 +23,3 @@ macro_rules! assert_eq_bitboard {
         }
     };
 }
-
-// pub(crate) use assert_eq_bitboard;

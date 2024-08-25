@@ -4,6 +4,7 @@ use crate::constants::A_FILE;
 use crate::constants::H_FILE;
 use crate::constants::RANK_1;
 use crate::constants::RANK_8;
+use crate::constants::WHITE_VALUE;
 use crate::game::magic;
 use crate::game::utility;
 
@@ -34,7 +35,6 @@ pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
     generate_sliding_moves(
         rook_board,
         occupancy,
-        // &utility::relevant_rook_blocking,
         &|blockers, index| blockers & rook_mask(index),
         &magic::ROOK_LOOKUP,
     )
@@ -49,7 +49,31 @@ pub fn generate_bishop_moves(bishop_board: u64, occupancy: u64) -> u64 {
     )
 }
 
-pub fn generate_sliding_moves(
+pub fn generate_queen_moves(queen_board: u64, occupancy: u64) -> u64 {
+    generate_bishop_moves(queen_board, occupancy) | generate_rook_moves(queen_board, occupancy)
+}
+
+pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
+    if color == WHITE_VALUE {
+        let temp = pawn_board & !RANK_8;
+        return (temp >> 8) & !occupancy;
+    }
+
+    let temp = pawn_board & !RANK_1;
+    (temp << 8) & !occupancy
+}
+
+pub fn generate_pawn_attacks(pawn_board: u64, color: u8) -> u64 {
+    if color == WHITE_VALUE {
+        let temp = pawn_board & !RANK_8;
+        return (temp >> 7) | (temp >> 9);
+    }
+
+    let temp = pawn_board & !RANK_1;
+    (temp << 7) | temp << 9
+}
+
+fn generate_sliding_moves(
     piece_board: u64,
     occupancy: u64,
     blocker_generator: &dyn Fn(u64, u32) -> u64,
