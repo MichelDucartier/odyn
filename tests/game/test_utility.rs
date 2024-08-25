@@ -1,12 +1,10 @@
 use std::collections::HashSet;
 
+use odyn::assert_eq_bitboard;
 use odyn::{
     assert_eq_u8,
-    game::utility::{self, board_to_rook_ranks, rook_rank_to_board},
+    game::utility::{self, board_to_rook_ranks},
 };
-use rand::{rngs::StdRng, RngCore, SeedableRng};
-
-use crate::common::formatting::assert_eq_bitboard;
 
 #[test]
 fn test_string_to_square_h4() {
@@ -36,14 +34,6 @@ fn test_index_to_square_b1() {
 fn test_extract_bit_with_1() {
     let res = utility::extract_bit(1 << 42, 42);
     assert_eq!(1, res);
-}
-
-#[test]
-fn test_extract_bit_with_0() {
-    let mut rng = StdRng::seed_from_u64(42);
-    let r = rng.next_u64();
-    let res = utility::extract_bit(r & (0 << 61), 61);
-    assert_eq!(0, res);
 }
 
 #[test]
@@ -170,5 +160,3 @@ fn test_board_to_rook_ranks() {
     assert_eq_u8!(row_expected, row);
     assert_eq_u8!(col_expected, col);
 }
-
-// 0010000000000000101010110010000000000000001000000000000000100000

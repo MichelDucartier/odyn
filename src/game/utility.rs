@@ -1,6 +1,12 @@
+use std::usize;
+
 use bit_reverse::ParallelReverse;
+use const_for::const_for;
+use ilog::IntLog;
 
 use crate::constants::{self, A_FILE, H_FILE, RANK_1, RANK_8};
+
+use super::magic::{self, BISHOP_LOOKUP, ROOK_LOOKUP};
 
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     // Check if the input string has exactly 2 characters
@@ -22,46 +28,42 @@ pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     let digit_value = second_char.to_digit(10).map(|d| 8 - d);
 
     // Return None if the second character is not a digit
-    if let Some(d) = digit_value {
-        Some((d, alphabet_index))
-    } else {
-        None
-    }
+    digit_value.map(|d| (d, alphabet_index))
 }
 
 pub fn square_to_index(row: u32, col: u32) -> u32 {
-    return (row << 3) + col;
+    (row << 3) + col
 }
 
 pub fn index_to_square(index: u32) -> (u32, u32) {
     let row = index >> 3;
     let col = index & 0b111;
-    return (row, col);
+    (row, col)
 }
 
 pub fn square_to_string(row: u32, col: u32) -> String {
     let str_col = std::char::from_u32(col + ('a' as u32)).unwrap();
-    return format!("{}{}", str_col, 8 - row);
+    format!("{}{}", str_col, 8 - row)
 }
 
 pub fn extract_bit(bits: u64, index: u8) -> u64 {
-    return (bits >> index) & 0b1;
+    (bits >> index) & 0b1
 }
 
 pub fn west_one(bits: u64) -> u64 {
-    return (bits & !constants::A_FILE) >> 1;
+    (bits & !constants::A_FILE) >> 1
 }
 
 pub fn east_one(bits: u64) -> u64 {
-    return (bits & !constants::H_FILE) << 1;
+    (bits & !constants::H_FILE) << 1
 }
 
 pub fn north_one(bits: u64) -> u64 {
-    return bits >> 8;
+    bits >> 8
 }
 
 pub fn south_one(bits: u64) -> u64 {
-    return bits << 8;
+    bits << 8
 }
 
 pub fn mask_row_col(board: u64, row: i32, col: i32) -> u64 {
@@ -85,7 +87,7 @@ pub fn flip_diag_a8h1(board: u64) -> u64 {
     let t = K1 & (x ^ (x << 7));
     x ^= t ^ (t >> 7);
 
-    return x;
+    x
 }
 
 pub fn flip_diag_a1h8(board: u64) -> u64 {
@@ -100,7 +102,7 @@ pub fn flip_diag_a1h8(board: u64) -> u64 {
     x ^= t ^ (t >> 18);
     t = k1 & (x ^ (x << 9));
     x ^= t ^ (t >> 9);
-    return x;
+    x
 }
 
 pub fn enumerate_subsets(board: u64) -> Vec<u64> {
@@ -150,11 +152,51 @@ pub fn format_bitboard(bitboard: u64) -> String {
         let bit = extract_bit(bitboard, i);
 
         if (i % 8) == 0 && i != 0 {
-            s.push_str("\n");
+            s.push('\n');
         }
 
         s.push_str(&bit.to_string());
     }
 
-    return s;
+    s
+}
+
+pub fn pseudo_rotate_45_clockwise(board: u64) -> u64 {
+    let mut x = board;
+
+    const K1: u64 = 0xAAAAAAAAAAAAAAAA;
+    const K2: u64 = 0xCCCCCCCCCCCCCCCC;
+    const K4: u64 = 0xF0F0F0F0F0F0F0F0;
+    x ^= K1 & (x ^ x.rotate_right(8));
+    x ^= K2 & (x ^ x.rotate_right(16));
+    x ^= K4 & (x ^ x.rotate_right(32));
+
+    x
+}
+
+pub fn pseudo_rotate_45_anticlockwise(board: u64) -> u64 {
+    let mut x = board;
+
+    const K1: u64 = 0x5555555555555555;
+    const K2: u64 = 0x3333333333333333;
+    const K4: u64 = 0x0f0f0f0f0f0f0f0f;
+    x ^= K1 & (x ^ x.rotate_right(8));
+    x ^= K2 & (x ^ x.rotate_right(16));
+    x ^= K4 & (x ^ x.rotate_right(32));
+
+    x
+}
+
+pub fn bishop_mask(bishop_index: u32) -> u64 {
+    let magic = BISHOP_LOOKUP.magics[bishop_index as usize];
+    let hash = magic::hash_board(0, magic, 13);
+
+    BISHOP_LOOKUP.lookup[bishop_index as usize][hash]
+}
+
+pub fn rook_mask(rook_index: u32) -> u64 {
+    let magic = ROOK_LOOKUP.magics[rook_index as usize];
+    let hash = magic::hash_board(0, magic, 13);
+
+    ROOK_LOOKUP.lookup[rook_index as usize][hash]
 }

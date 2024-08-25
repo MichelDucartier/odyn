@@ -1,6 +1,6 @@
-use crate::common::formatting::assert_eq_bitboard;
+use odyn::assert_eq_bitboard;
 use odyn::game::bitboard::Bitboard;
-use odyn::game::{move_generator, utility};
+use odyn::game::move_generator;
 
 #[test]
 fn test_king_moves() {
@@ -10,7 +10,7 @@ fn test_king_moves() {
     let expected_moves =
         1 << 26 | 1 << 27 | 1 << 28 | 1 << 34 | 1 << 36 | 1 << 42 | 1 << 43 | 1 << 44;
 
-    assert_eq_bitboard!(
+    odyn::assert_eq_bitboard!(
         expected_moves,
         move_generator::generate_king_moves(bitboard.king_board) & !bitboard.king_board
     );
@@ -100,4 +100,36 @@ fn test_rook_moves_with_blocking() {
             bitboard.white_board | bitboard.black_board
         ) & !bitboard.rook_board
     );
+}
+
+#[test]
+fn test_bishop_moves_single_bishop() {
+    let start_fen = "8/8/8/8/8/2B5/8/8 w - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let expected_moves = 0b0001000100001010000001000000101000010001001000000100000010000000;
+
+    assert_eq_bitboard!(
+        expected_moves & !bitboard.bishop_board,
+        move_generator::generate_bishop_moves(
+            bitboard.bishop_board,
+            bitboard.white_board | bitboard.black_board
+        ) & !bitboard.bishop_board
+    )
+}
+
+#[test]
+fn test_bishop_moves_with_blocking() {
+    let start_fen = "7b/8/8/5P2/8/2n2B2/6K1/8 w - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let expected_moves = 0b0000100001010000001001000101100010011000001001000100001010000001;
+
+    assert_eq_bitboard!(
+        expected_moves & !bitboard.bishop_board,
+        move_generator::generate_bishop_moves(
+            bitboard.bishop_board,
+            bitboard.white_board | bitboard.black_board
+        ) & !bitboard.bishop_board
+    )
 }

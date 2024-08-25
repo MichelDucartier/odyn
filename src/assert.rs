@@ -10,3 +10,18 @@ macro_rules! assert_eq_u8 {
         }
     };
 }
+
+#[macro_export]
+macro_rules! assert_eq_bitboard {
+    ($left:expr, $right:expr) => {
+        if $left != $right {
+            panic!(
+                "assertion failed: `(left == right)`\nleft: \n{},\n\nright: \n{}",
+                $crate::format_bitboard($left),
+                $crate::format_bitboard($right)
+            );
+        }
+    };
+}
+
+// pub(crate) use assert_eq_bitboard;

@@ -3,6 +3,9 @@ name = "odyn"
 version = "0.1.0"
 edition = "2021"
 
+[dev-dependencies]
+criterion = "0.5.1"
+
 [dependencies]
 anyhow = "1.0.86"
 bit_reverse = "0.1.8"
