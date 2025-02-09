@@ -1,9 +1,15 @@
-use super::bitboard::Bitboard;
+use super::{
+    bitboard::Bitboard,
+    chess_move::Move,
+    mailbox::{self, MailboxBoard},
+};
 use crate::game::bitboard;
 
 #[derive(Default, Debug)]
 pub struct Chessboard {
     bitboard: bitboard::Bitboard,
+    mailbox: mailbox::MailboxBoard,
+
     white_moves: u32,
     black_moves: u32,
 }
@@ -17,23 +23,24 @@ impl Chessboard {
             panic!("Invalid fen, invalid number of parts")
         };
 
-        let mut chessboard = Chessboard::default();
-
-        // Load bitboard
-        chessboard.bitboard = Bitboard::from_fen(fen, separator);
-
-        // Load number of moves
-        chessboard.white_moves = s_wmoves.parse().unwrap();
-        chessboard.black_moves = s_bmoves.parse().unwrap();
-
-        return chessboard;
+        Chessboard {
+            bitboard: Bitboard::from_fen(fen, separator),
+            mailbox: MailboxBoard::from_fen(fen, separator),
+            white_moves: s_wmoves.parse().unwrap(),
+            black_moves: s_bmoves.parse().unwrap(),
+        }
     }
 
-    pub fn to_fen(&mut self, separator: &str) -> String {
+    pub fn to_fen(&self, separator: &str) -> String {
         let mut bitboard_fen = self.bitboard.to_fen();
         let move_counts = format!("{} {}", self.black_moves, self.white_moves);
         bitboard_fen.push(move_counts);
 
         bitboard_fen.join(separator)
+    }
+
+    pub fn make_move_unchecked(&mut self, move_: Move) {
+        let flags = self.mailbox.move_piece(&move_);
+        self.bitboard.move_piece(&move_, flags);
     }
 }

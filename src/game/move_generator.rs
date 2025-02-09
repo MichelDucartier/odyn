@@ -1,13 +1,14 @@
 use ilog::IntLog;
 
-use crate::constants::A_FILE;
-use crate::constants::H_FILE;
-use crate::constants::RANK_1;
-use crate::constants::RANK_8;
-use crate::constants::WHITE_VALUE;
+use crate::constants;
+use crate::constants::A_FILE_MASK;
+use crate::constants::H_FILE_MASK;
+use crate::constants::RANK_1_MASK;
+use crate::constants::RANK_8_MASK;
 use crate::game::magic;
 use crate::game::utility;
 
+use super::bitboard;
 use super::utility::bishop_mask;
 use super::utility::rook_mask;
 
@@ -29,6 +30,24 @@ pub fn generate_king_moves(king_board: u64) -> u64 {
     attacks |= utility::south_one(attacks) | utility::north_one(attacks);
 
     attacks
+}
+
+pub fn generate_king_castle(color: u8, flags: u8) -> u64 {
+    let king_castle;
+    let queen_castle;
+    let piece_offset;
+
+    if color == constants::WHITE_ID {
+        king_castle = (flags >> bitboard::WKCASTLE_F_INDEX) & 0b1;
+        queen_castle = (flags >> bitboard::WQCASTLE_F_INDEX) & 0b1;
+        piece_offset = 56;
+    } else {
+        king_castle = (flags >> bitboard::BKCASTLE_F_INDEX) & 0b1;
+        queen_castle = (flags >> bitboard::BQCASTLE_F_INDEX) & 0b1;
+        piece_offset = 0;
+    }
+
+    u64::from((king_castle << 6) | (queen_castle << 2)) << piece_offset
 }
 
 pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
@@ -54,22 +73,22 @@ pub fn generate_queen_moves(queen_board: u64, occupancy: u64) -> u64 {
 }
 
 pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
-    if color == WHITE_VALUE {
-        let temp = pawn_board & !RANK_8;
+    if color == constants::WHITE_ID {
+        let temp = pawn_board & !RANK_8_MASK;
         return (temp >> 8) & !occupancy;
     }
 
-    let temp = pawn_board & !RANK_1;
+    let temp = pawn_board & !RANK_1_MASK;
     (temp << 8) & !occupancy
 }
 
 pub fn generate_pawn_attacks(pawn_board: u64, color: u8) -> u64 {
-    if color == WHITE_VALUE {
-        let temp = pawn_board & !RANK_8;
+    if color == constants::WHITE_ID {
+        let temp = pawn_board & !RANK_8_MASK;
         return (temp >> 7) | (temp >> 9);
     }
 
-    let temp = pawn_board & !RANK_1;
+    let temp = pawn_board & !RANK_1_MASK;
     (temp << 7) | temp << 9
 }
 
@@ -89,10 +108,10 @@ fn generate_sliding_moves(
 
         let relevant_blockers = blocker_generator(occupancy, piece_index)
             & !(1 << piece_index)
-            & !A_FILE
-            & !H_FILE
-            & !RANK_1
-            & !RANK_8;
+            & !A_FILE_MASK
+            & !H_FILE_MASK
+            & !RANK_1_MASK
+            & !RANK_8_MASK;
 
         let magic = magic_lookup.magics[lookup_index];
 

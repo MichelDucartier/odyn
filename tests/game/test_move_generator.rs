@@ -1,6 +1,7 @@
-use odyn::assert_eq_bitboard;
-use odyn::game::bitboard::Bitboard;
-use odyn::game::move_generator;
+use odyn::{
+    assert_eq_bitboard,
+    game::{bitboard::Bitboard, move_generator},
+};
 
 #[test]
 fn test_king_moves() {

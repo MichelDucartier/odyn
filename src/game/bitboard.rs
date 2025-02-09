@@ -1,9 +1,15 @@
 use smallvec::{smallvec, SmallVec};
 
-use super::utility;
-use crate::constants::{BLACK_VALUE, WHITE_VALUE};
-use core::panic;
-use std::collections::HashMap;
+use super::{
+    chess_move::{self, Move},
+    utility,
+};
+use crate::constants::{
+    BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
+    FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_4_INDEX, RANK_5_INDEX, ROOK_ID,
+    WHITE_ID,
+};
+use std::{collections::HashMap, panic};
 
 #[derive(Debug, Default)]
 pub struct Bitboard {
@@ -40,11 +46,7 @@ impl Bitboard {
         bitboard.load_bitboard(s_board);
 
         // Load turn
-        bitboard.flags |= (if *s_turn == "w" {
-            WHITE_VALUE
-        } else {
-            BLACK_VALUE
-        }) << TURN_F_INDEX;
+        bitboard.flags |= (if *s_turn == "w" { WHITE_ID } else { BLACK_ID }) << TURN_F_INDEX;
 
         // Load castle rights
         bitboard.load_castle_rights(s_castle);
@@ -54,29 +56,92 @@ impl Bitboard {
             bitboard.en_passant |= 1 << col;
         }
 
-        return bitboard;
+        bitboard
     }
 
-    pub fn to_fen(&mut self) -> SmallVec<[String; 4]> {
+    // pub fn get_board(&self, key: u8) -> Option<u64> {
+    //     match key {
+    //         PAWN_ID => Some(self.pawn_board),
+    //         KNIGHT_ID => Some(self.knight_board),
+    //         BISHOP_ID => Some(self.bishop_board),
+    //         ROOK_ID => Some(self.rook_board),
+    //         QUEEN_ID => Some(self.queen_board),
+    //         KING_ID => Some(self.king_board),
+    //         EMPTY_ID => None,
+    //         _ => panic!("Invalid key for get_board"),
+    //     }
+    // }
+
+    // pub fn set_board(&mut self, key: u8, value: u64) {
+    //     match key {
+    //         PAWN_ID => self.pawn_board = value,
+    //         KNIGHT_ID => self.knight_board = value,
+    //         BISHOP_ID => self.bishop_board = value,
+    //         ROOK_ID => self.rook_board = value,
+    //         QUEEN_ID => self.queen_board = value,
+    //         KING_ID => self.king_board = value,
+    //         EMPTY_ID => (),
+    //         _ => panic!("Invalid key for set_board"),
+    //     }
+    // }
+
+    fn remove_piece_from_board(&mut self, piece_id: u8, color_id: u8, index: u32) {
+        // Remove piece from board
+        match piece_id {
+            PAWN_ID => self.pawn_board &= !(1 << index),
+            KNIGHT_ID => self.knight_board &= !(1 << index),
+            BISHOP_ID => self.bishop_board &= !(1 << index),
+            ROOK_ID => self.rook_board &= !(1 << index),
+            QUEEN_ID => self.queen_board &= !(1 << index),
+            KING_ID => self.king_board &= !(1 << index),
+            _ => panic!("Invalid piece_id for remove_piece_from_board"),
+        }
+
+        match color_id {
+            BLACK_ID => self.black_board &= !(1 << index),
+            WHITE_ID => self.white_board &= !(1 << index),
+            _ => panic!("Invalid color_id for remove_piece_from_board"),
+        }
+    }
+
+    fn add_piece_to_board(&mut self, piece_id: u8, color_id: u8, index: u32) {
+        // Add piece to board
+        match piece_id {
+            PAWN_ID => self.pawn_board |= 1 << index,
+            KNIGHT_ID => self.knight_board |= 1 << index,
+            BISHOP_ID => self.bishop_board |= 1 << index,
+            ROOK_ID => self.rook_board |= 1 << index,
+            QUEEN_ID => self.queen_board |= 1 << index,
+            KING_ID => self.king_board |= 1 << index,
+            _ => panic!("Invalid piece_id for add_piece_to_board"),
+        }
+        match color_id {
+            BLACK_ID => self.black_board |= 1 << index,
+            WHITE_ID => self.white_board |= 1 << index,
+            _ => panic!("Invalid color_id for add_piece_to_board"),
+        }
+    }
+
+    pub fn to_fen(&self) -> SmallVec<[String; 4]> {
         let board_fen = self.board_to_fen();
         let castle_fen = self.castle_to_fen();
         let turn_fen = self.turn_to_fen();
         let en_passant_fen = self.en_passant_to_fen();
 
-        return smallvec![board_fen, turn_fen, castle_fen, en_passant_fen];
+        smallvec![board_fen, turn_fen, castle_fen, en_passant_fen]
     }
 
-    fn turn_to_fen(&mut self) -> String {
+    fn turn_to_fen(&self) -> String {
         let turn = (self.flags >> 4) & 0b1;
 
-        if turn == WHITE_VALUE {
+        if turn == WHITE_ID {
             return "w".to_string();
         }
 
-        return "b".to_string();
+        "b".to_string()
     }
 
-    fn en_passant_to_fen(&mut self) -> String {
+    fn en_passant_to_fen(&self) -> String {
         if self.en_passant == 0 {
             return "-".to_string();
         }
@@ -85,12 +150,12 @@ impl Bitboard {
         let col = self.en_passant.trailing_zeros();
 
         // If current turn is white then it's black's pawn that can be taken in en passant
-        let row = if current_turn == WHITE_VALUE { 2 } else { 5 };
+        let row = if current_turn == WHITE_ID { 2 } else { 5 };
 
-        return utility::square_to_string(row, col);
+        utility::square_to_string(row, col)
     }
 
-    fn castle_to_fen(&mut self) -> String {
+    fn castle_to_fen(&self) -> String {
         let char_to_index: smallvec::SmallVec<[(char, u8); 4]> = smallvec![
             ('K', WKCASTLE_F_INDEX),
             ('Q', WQCASTLE_F_INDEX),
@@ -107,14 +172,14 @@ impl Bitboard {
         }
 
         // Handle case when no castle rights
-        if s.len() == 0 {
+        if s.is_empty() {
             return "-".to_string();
         }
 
-        return s;
+        s
     }
 
-    fn board_to_fen(&mut self) -> String {
+    fn board_to_fen(&self) -> String {
         let mut s: String = "".to_owned();
 
         let char_to_board: smallvec::SmallVec<[(char, &u64); 6]> = smallvec::smallvec![
@@ -133,7 +198,7 @@ impl Bitboard {
                 if blank != 0 {
                     s.push_str(&blank.to_string());
                 }
-                s.push_str("/");
+                s.push('/');
 
                 blank = 0;
             }
@@ -160,7 +225,7 @@ impl Bitboard {
             blank += 1;
         }
 
-        return s;
+        s
     }
 
     fn load_bitboard(&mut self, s_board: &str) {
@@ -221,5 +286,75 @@ impl Bitboard {
                 self.flags |= 1 << x;
             }
         }
+    }
+
+    pub fn move_piece(&mut self, move_: &Move, flags: u16) {
+        let is_enpassant = chess_move::get_en_passant_flag(flags);
+        let is_castle = chess_move::get_castle_flag(flags);
+
+        let piece_id = chess_move::get_piece_flag(flags);
+        let color_id = chess_move::get_color_flag(flags);
+
+        let opposite_color = !chess_move::get_color_flag(flags);
+        let captured_piece_id = chess_move::get_captured_piece_flag(flags);
+
+        if !is_enpassant && !is_castle {
+            // Remove piece from destination position + add it to the destination
+            self.remove_piece_from_board(piece_id, color_id, move_.start_index);
+            self.add_piece_to_board(piece_id, color_id, move_.end_index);
+
+            // Remove captured piece if any
+            if captured_piece_id != EMPTY_ID {
+                self.remove_piece_from_board(captured_piece_id, opposite_color, move_.end_index);
+            }
+            return;
+        }
+
+        if is_enpassant {
+            self.en_passant_move(move_, color_id);
+            return;
+        }
+
+        if is_castle {
+            self.castle_move(move_, color_id);
+        }
+    }
+
+    fn en_passant_move(&mut self, move_: &Move, color_id: u8) {
+        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+        let captured_row = if color_id == WHITE_ID {
+            RANK_5_INDEX
+        } else {
+            RANK_4_INDEX
+        };
+
+        let captured_index = utility::square_to_index(captured_row, end_col);
+
+        // Remove captured pawn
+        self.remove_piece_from_board(PAWN_ID, !color_id, captured_index);
+
+        // Move pawn
+        self.add_piece_to_board(PAWN_ID, color_id, move_.end_index);
+        self.remove_piece_from_board(PAWN_ID, color_id, move_.start_index);
+    }
+
+    fn castle_move(&mut self, move_: &Move, color_id: u8) {
+        let (row, end_col) = utility::index_to_square(move_.end_index);
+
+        let (rook_start_col, rook_end_col) = if end_col == FILE_G_INDEX {
+            (FILE_H_INDEX, FILE_F_INDEX)
+        } else {
+            (FILE_A_INDEX, FILE_D_INDEX)
+        };
+
+        // Move king
+        self.remove_piece_from_board(KING_ID, color_id, move_.start_index);
+        self.add_piece_to_board(KING_ID, color_id, move_.end_index);
+
+        // Move rook
+        let rook_start_index = utility::square_to_index(row, rook_start_col);
+        let rook_end_index = utility::square_to_index(row, rook_end_col);
+        self.remove_piece_from_board(ROOK_ID, color_id, rook_start_index);
+        self.add_piece_to_board(ROOK_ID, color_id, rook_end_index);
     }
 }

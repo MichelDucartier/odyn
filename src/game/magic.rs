@@ -3,7 +3,7 @@ use ilog::IntLog;
 use lazy_static::lazy_static;
 
 use crate::{
-    constants::{A_FILE, H_FILE, RANK_1, RANK_8},
+    constants::{A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK},
     game::utility,
 };
 
@@ -177,7 +177,11 @@ lazy_static! {
     );
     pub static ref BISHOP_LOOKUP: MagicLookup = generate_magic_lt(
         &|piece_index: u32| -> u64 {
-            bishop_attack(0, piece_index) & !A_FILE & !H_FILE & !RANK_1 & !RANK_8
+            bishop_attack(0, piece_index)
+                & !A_FILE_MASK
+                & !H_FILE_MASK
+                & !RANK_1_MASK
+                & !RANK_8_MASK
         },
         &bishop_attack
     );

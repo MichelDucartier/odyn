@@ -1,5 +1,5 @@
 use super::magic::{self, BISHOP_LOOKUP, ROOK_LOOKUP};
-use crate::constants::{self, A_FILE, H_FILE, RANK_1, RANK_8};
+use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
 use bit_reverse::ParallelReverse;
 
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
@@ -45,11 +45,11 @@ pub fn extract_bit(bits: u64, index: u8) -> u64 {
 }
 
 pub fn west_one(bits: u64) -> u64 {
-    (bits & !constants::A_FILE) >> 1
+    (bits & !constants::A_FILE_MASK) >> 1
 }
 
 pub fn east_one(bits: u64) -> u64 {
-    (bits & !constants::H_FILE) << 1
+    (bits & !constants::H_FILE_MASK) << 1
 }
 
 pub fn north_one(bits: u64) -> u64 {
@@ -61,7 +61,7 @@ pub fn south_one(bits: u64) -> u64 {
 }
 
 pub fn mask_row_col(board: u64, row: i32, col: i32) -> u64 {
-    board & (A_FILE >> row) & (RANK_1 >> col)
+    board & (A_FILE_MASK >> row) & (RANK_1_MASK >> col)
 }
 
 pub fn flip_vertical(board: u64) -> u64 {
@@ -136,7 +136,11 @@ pub fn board_to_rook_ranks(board: u64, rook_index: u32) -> (u8, u8) {
 
 pub fn relevant_rook_blocking(board: u64, rook_index: u32) -> u64 {
     let (row_rank, col_rank) = board_to_rook_ranks(board, rook_index);
-    rook_rank_to_board(row_rank, col_rank, rook_index) & !A_FILE & !H_FILE & !RANK_1 & !RANK_8
+    rook_rank_to_board(row_rank, col_rank, rook_index)
+        & !A_FILE_MASK
+        & !H_FILE_MASK
+        & !RANK_1_MASK
+        & !RANK_8_MASK
 }
 
 pub fn format_bitboard(bitboard: u64) -> String {

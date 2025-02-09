@@ -9,6 +9,7 @@ criterion = "0.5.1"
 [dependencies]
 anyhow = "1.0.86"
 bit_reverse = "0.1.8"
+clap = { version = "4.5.13", features = ["derive"] }
 const_for = "0.1.4"
 fastrand = "2.1.0"
 fxhash = "0.2.1"
