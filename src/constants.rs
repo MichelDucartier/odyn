@@ -33,3 +33,11 @@ pub const FILE_D_INDEX: u32 = 3;
 pub const FILE_C_INDEX: u32 = 2;
 pub const FILE_B_INDEX: u32 = 1;
 pub const FILE_A_INDEX: u32 = 0;
+
+pub fn opposite(color_id: u8) -> u8 {
+    match color_id {
+        WHITE_ID => BLACK_ID,
+        BLACK_ID => WHITE_ID,
+        _ => panic!("Invalid color id passed: {}", color_id),
+    }
+}

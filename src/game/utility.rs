@@ -25,11 +25,11 @@ pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     digit_value.map(|d| (d, alphabet_index))
 }
 
-pub fn square_to_index(row: u32, col: u32) -> u32 {
+pub const fn square_to_index(row: u32, col: u32) -> u32 {
     (row << 3) + col
 }
 
-pub fn index_to_square(index: u32) -> (u32, u32) {
+pub const fn index_to_square(index: u32) -> (u32, u32) {
     let row = index >> 3;
     let col = index & 0b111;
     (row, col)

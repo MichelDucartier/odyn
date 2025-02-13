@@ -5,11 +5,11 @@ use super::{
     utility,
 };
 use crate::constants::{
-    BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
-    FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_4_INDEX, RANK_5_INDEX, ROOK_ID,
-    WHITE_ID,
+    self, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
+    FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_2_INDEX, RANK_3_INDEX, RANK_4_INDEX,
+    RANK_5_INDEX, RANK_6_INDEX, RANK_8_INDEX, ROOK_ID, WHITE_ID,
 };
-use std::{collections::HashMap, panic};
+use std::{cmp, collections::HashMap, panic};
 
 #[derive(Debug, Default)]
 pub struct Bitboard {
@@ -59,18 +59,26 @@ impl Bitboard {
         bitboard
     }
 
-    // pub fn get_board(&self, key: u8) -> Option<u64> {
-    //     match key {
-    //         PAWN_ID => Some(self.pawn_board),
-    //         KNIGHT_ID => Some(self.knight_board),
-    //         BISHOP_ID => Some(self.bishop_board),
-    //         ROOK_ID => Some(self.rook_board),
-    //         QUEEN_ID => Some(self.queen_board),
-    //         KING_ID => Some(self.king_board),
-    //         EMPTY_ID => None,
-    //         _ => panic!("Invalid key for get_board"),
-    //     }
-    // }
+    fn get_piece_board(&self, key: u8) -> Option<u64> {
+        match key {
+            PAWN_ID => Some(self.pawn_board),
+            KNIGHT_ID => Some(self.knight_board),
+            BISHOP_ID => Some(self.bishop_board),
+            ROOK_ID => Some(self.rook_board),
+            QUEEN_ID => Some(self.queen_board),
+            KING_ID => Some(self.king_board),
+            EMPTY_ID => None,
+            _ => panic!("Invalid key for get_piece_board: {}", key),
+        }
+    }
+
+    fn get_color_board(&self, key: u8) -> u64 {
+        match key {
+            WHITE_ID => self.white_board,
+            BLACK_ID => self.black_board,
+            _ => panic!("Invalid key for get_color_board: {}", key),
+        }
+    }
 
     // pub fn set_board(&mut self, key: u8, value: u64) {
     //     match key {
@@ -150,7 +158,11 @@ impl Bitboard {
         let col = self.en_passant.trailing_zeros();
 
         // If current turn is white then it's black's pawn that can be taken in en passant
-        let row = if current_turn == WHITE_ID { 2 } else { 5 };
+        let row = if current_turn == WHITE_ID {
+            RANK_6_INDEX
+        } else {
+            RANK_3_INDEX
+        };
 
         utility::square_to_string(row, col)
     }
@@ -223,6 +235,11 @@ impl Bitboard {
             }
 
             blank += 1;
+        }
+
+        // Add last blank
+        if blank != 0 {
+            s.push_str(&blank.to_string());
         }
 
         s
@@ -298,7 +315,11 @@ impl Bitboard {
         let opposite_color = !chess_move::get_color_flag(flags);
         let captured_piece_id = chess_move::get_captured_piece_flag(flags);
 
-        if !is_enpassant && !is_castle {
+        if is_enpassant {
+            self.en_passant_move(move_, color_id);
+        } else if is_castle {
+            self.castle_move(move_, color_id);
+        } else {
             // Remove piece from destination position + add it to the destination
             self.remove_piece_from_board(piece_id, color_id, move_.start_index);
             self.add_piece_to_board(piece_id, color_id, move_.end_index);
@@ -307,16 +328,61 @@ impl Bitboard {
             if captured_piece_id != EMPTY_ID {
                 self.remove_piece_from_board(captured_piece_id, opposite_color, move_.end_index);
             }
+        }
+
+        // Update en passant flags
+        self.update_en_passant_flags(piece_id, color_id, move_);
+
+        // Update castle flags
+        self.update_castle_flags(piece_id, color_id, move_);
+
+        // Update turn
+        self.flags ^= 1 << TURN_F_INDEX;
+    }
+
+    fn update_en_passant_flags(&mut self, piece_id: u8, color_id: u8, move_: &Move) {
+        let (start_row, _start_col) = utility::index_to_square(move_.start_index);
+        let (end_row, col) = utility::index_to_square(move_.end_index);
+
+        // Check if opponent pawn is next to the current pawn
+        let opponent_pawns = self.get_piece_board(PAWN_ID).unwrap()
+            & self.get_color_board(constants::opposite(color_id));
+        let left_index = utility::square_to_index(end_row, cmp::max(col - 1, FILE_A_INDEX));
+        let right_index = utility::square_to_index(end_row, cmp::min(col + 1, FILE_H_INDEX));
+        let eligible_pawns = opponent_pawns & ((1 << left_index) | (1 << right_index));
+
+        if piece_id == PAWN_ID && start_row.abs_diff(end_row) == 2 && eligible_pawns != 0 {
+            self.en_passant = 1 << col;
             return;
         }
 
-        if is_enpassant {
-            self.en_passant_move(move_, color_id);
+        self.en_passant = 0;
+    }
+
+    fn update_castle_flags(&mut self, piece_id: u8, color_id: u8, move_: &Move) {
+        if piece_id != KING_ID && piece_id != ROOK_ID {
             return;
         }
 
-        if is_castle {
-            self.castle_move(move_, color_id);
+        // Update flags if the king is moved
+        if piece_id == KING_ID {
+            if color_id == WHITE_ID {
+                self.flags &= !(1 << WKCASTLE_F_INDEX) & !(1 << WQCASTLE_F_INDEX);
+            } else {
+                self.flags &= !(1 << BKCASTLE_F_INDEX) & !(1 << BQCASTLE_F_INDEX);
+            }
+            return;
+        }
+
+        // Update flags if the rook is moved
+        let (_start_row, start_col) = utility::index_to_square(move_.start_index);
+
+        match (color_id, start_col) {
+            (WHITE_ID, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
+            (WHITE_ID, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
+            (BLACK_ID, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
+            (BLACK_ID, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
+            _ => (),
         }
     }
 
@@ -331,7 +397,7 @@ impl Bitboard {
         let captured_index = utility::square_to_index(captured_row, end_col);
 
         // Remove captured pawn
-        self.remove_piece_from_board(PAWN_ID, !color_id, captured_index);
+        self.remove_piece_from_board(PAWN_ID, constants::opposite(color_id), captured_index);
 
         // Move pawn
         self.add_piece_to_board(PAWN_ID, color_id, move_.end_index);
