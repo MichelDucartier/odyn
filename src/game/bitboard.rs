@@ -2,16 +2,23 @@ use smallvec::{smallvec, SmallVec};
 
 use super::{
     chess_move::{self, Move},
+    move_generator::{
+        generate_bishop_moves, generate_king_castle, generate_king_moves, generate_knight_moves,
+        generate_pawn_attacks, generate_pawn_moves, generate_queen_moves, generate_rook_moves,
+    },
     utility,
 };
 use crate::constants::{
-    self, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
-    FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_2_INDEX, RANK_3_INDEX, RANK_4_INDEX,
-    RANK_5_INDEX, RANK_6_INDEX, RANK_8_INDEX, ROOK_ID, WHITE_ID,
+    self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX,
+    FILE_G_INDEX, FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_3_INDEX, RANK_4_INDEX,
+    RANK_5_INDEX, RANK_6_INDEX, ROOK_ID, WHITE_ID,
 };
-use std::{cmp, collections::HashMap, panic};
+use std::{
+    cmp,
+    collections::{HashMap, HashSet},
+};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Bitboard {
     pub white_board: u64,
     pub black_board: u64,
@@ -59,7 +66,7 @@ impl Bitboard {
         bitboard
     }
 
-    fn get_piece_board(&self, key: u8) -> Option<u64> {
+    pub fn get_piece_board(&self, key: u8) -> Option<u64> {
         match key {
             PAWN_ID => Some(self.pawn_board),
             KNIGHT_ID => Some(self.knight_board),
@@ -72,26 +79,13 @@ impl Bitboard {
         }
     }
 
-    fn get_color_board(&self, key: u8) -> u64 {
+    pub fn get_color_board(&self, key: u8) -> u64 {
         match key {
             WHITE_ID => self.white_board,
             BLACK_ID => self.black_board,
             _ => panic!("Invalid key for get_color_board: {}", key),
         }
     }
-
-    // pub fn set_board(&mut self, key: u8, value: u64) {
-    //     match key {
-    //         PAWN_ID => self.pawn_board = value,
-    //         KNIGHT_ID => self.knight_board = value,
-    //         BISHOP_ID => self.bishop_board = value,
-    //         ROOK_ID => self.rook_board = value,
-    //         QUEEN_ID => self.queen_board = value,
-    //         KING_ID => self.king_board = value,
-    //         EMPTY_ID => (),
-    //         _ => panic!("Invalid key for set_board"),
-    //     }
-    // }
 
     fn remove_piece_from_board(&mut self, piece_id: u8, color_id: u8, index: u32) {
         // Remove piece from board
@@ -102,13 +96,13 @@ impl Bitboard {
             ROOK_ID => self.rook_board &= !(1 << index),
             QUEEN_ID => self.queen_board &= !(1 << index),
             KING_ID => self.king_board &= !(1 << index),
-            _ => panic!("Invalid piece_id for remove_piece_from_board"),
+            _ => panic!("Invalid piece_id for remove_piece_from_board: {}", piece_id),
         }
 
         match color_id {
             BLACK_ID => self.black_board &= !(1 << index),
             WHITE_ID => self.white_board &= !(1 << index),
-            _ => panic!("Invalid color_id for remove_piece_from_board"),
+            _ => panic!("Invalid color_id for remove_piece_from_board: {}", color_id),
         }
     }
 
@@ -312,8 +306,14 @@ impl Bitboard {
         let piece_id = chess_move::get_piece_flag(flags);
         let color_id = chess_move::get_color_flag(flags);
 
-        let opposite_color = !chess_move::get_color_flag(flags);
+        // println!("Piece ID: {}", piece_id);
+        // println!("Color ID: {}", color_id);
+
+        let opposite_color = constants::opposite(chess_move::get_color_flag(flags));
         let captured_piece_id = chess_move::get_captured_piece_flag(flags);
+
+        // println!("Captured Piece ID: {}", captured_piece_id);
+        // println!("Captured Color ID: {}", opposite_color)
 
         if is_enpassant {
             self.en_passant_move(move_, color_id);
@@ -347,10 +347,24 @@ impl Bitboard {
         // Check if opponent pawn is next to the current pawn
         let opponent_pawns = self.get_piece_board(PAWN_ID).unwrap()
             & self.get_color_board(constants::opposite(color_id));
-        let left_index = utility::square_to_index(end_row, cmp::max(col - 1, FILE_A_INDEX));
-        let right_index = utility::square_to_index(end_row, cmp::min(col + 1, FILE_H_INDEX));
-        let eligible_pawns = opponent_pawns & ((1 << left_index) | (1 << right_index));
 
+        // Compute eligible pawns to be captured in en passant
+        // Need to skip the files on the extremes (to avoid overflow error)
+        let mut mask_pawns = 0;
+
+        if col != FILE_A_INDEX {
+            let left_index = utility::square_to_index(end_row, col);
+            mask_pawns |= 1 << left_index;
+        }
+
+        if col != FILE_H_INDEX {
+            let right_index = utility::square_to_index(end_row, cmp::min(col + 1, FILE_H_INDEX));
+            mask_pawns |= 1 << right_index;
+        }
+
+        let eligible_pawns = opponent_pawns & mask_pawns;
+
+        // Update en passant flag
         if piece_id == PAWN_ID && start_row.abs_diff(end_row) == 2 && eligible_pawns != 0 {
             self.en_passant = 1 << col;
             return;
@@ -422,5 +436,83 @@ impl Bitboard {
         let rook_end_index = utility::square_to_index(row, rook_end_col);
         self.remove_piece_from_board(ROOK_ID, color_id, rook_start_index);
         self.add_piece_to_board(ROOK_ID, color_id, rook_end_index);
+    }
+
+    // fn generate_full_attacks(&self, piece_id: u8, color_id: u8) -> u64 {
+    //     let piece_board = self.get_piece_board(piece_id).unwrap() & self.get_color_board(color_id);
+    //     self.generate_attacks(piece_id, color_id, piece_board)
+    // }
+
+    fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let occupancy = self.white_board | self.black_board;
+
+        match piece_id {
+            constants::KNIGHT_ID => generate_knight_moves(piece_board),
+            constants::BISHOP_ID => generate_bishop_moves(piece_board, occupancy),
+            constants::ROOK_ID => generate_rook_moves(piece_board, occupancy),
+            constants::QUEEN_ID => generate_queen_moves(piece_board, occupancy),
+            constants::KING_ID => generate_king_moves(piece_board),
+            constants::PAWN_ID => generate_pawn_attacks(piece_board, color_id, self.en_passant),
+            constants::EMPTY_ID => 0,
+            _ => panic!("Invalid piece id : {piece_id}"),
+        }
+    }
+
+    fn generate_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let occupancy = self.white_board | self.black_board;
+        let moves = match piece_id {
+            constants::KNIGHT_ID => generate_knight_moves(piece_board),
+            constants::BISHOP_ID => generate_bishop_moves(piece_board, occupancy),
+            constants::ROOK_ID => generate_rook_moves(piece_board, occupancy),
+            constants::QUEEN_ID => generate_queen_moves(piece_board, occupancy),
+            constants::KING_ID => {
+                generate_king_moves(piece_board) | generate_king_castle(color_id, self.flags)
+            }
+            constants::PAWN_ID => generate_pawn_moves(piece_board, occupancy, color_id),
+            constants::EMPTY_ID => 0,
+            _ => panic!("Invalid piece id : {piece_id}"),
+        };
+
+        moves & !occupancy
+    }
+
+    fn generate_effective_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let piece_moves = self.generate_attacks(piece_id, color_id, piece_board);
+        let opponent_board = self.get_color_board(constants::opposite(color_id));
+        piece_moves & opponent_board
+    }
+
+    pub fn generate_legal_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let piece_attacks = self.generate_effective_attacks(piece_id, color_id, piece_board);
+        let piece_moves = self.generate_moves(piece_id, color_id, piece_board);
+        // let occupancy = self.white_board | self.black_board;
+
+        piece_moves | piece_attacks
+
+        // match piece_id {
+        //     constants::KING_ID => {
+        //         piece_moves | piece_attacks | generate_king_castle(color_id, self.flags)
+        //     }
+        //     constants::PAWN_ID => {
+        //         piece_moves | piece_attacks | generate_pawn_moves(piece_board, occupancy, color_id)
+        //     }
+        //     _ => piece_moves | piece_attacks,
+        // }
+    }
+
+    pub fn is_in_check(&self, color_id: u8) -> bool {
+        let opponent_id = constants::opposite(color_id);
+        let allied_king = self.king_board & self.get_color_board(color_id);
+        let opponent_board = self.get_color_board(opponent_id);
+
+        for piece_id in ALL_PIECES_ID {
+            let piece_board = self.get_piece_board(piece_id).unwrap() & opponent_board;
+            let piece_attacks = self.generate_attacks(piece_id, opponent_id, piece_board);
+            if allied_king & piece_attacks != 0 {
+                return true;
+            }
+        }
+
+        false
     }
 }

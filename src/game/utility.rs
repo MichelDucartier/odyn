@@ -40,6 +40,11 @@ pub fn square_to_string(row: u32, col: u32) -> String {
     format!("{}{}", str_col, 8 - row)
 }
 
+pub fn index_to_string(index: u32) -> String {
+    let (row, col) = index_to_square(index);
+    square_to_string(row, col)
+}
+
 pub fn extract_bit(bits: u64, index: u8) -> u64 {
     (bits >> index) & 0b1
 }
@@ -197,4 +202,15 @@ pub fn rook_mask(rook_index: u32) -> u64 {
     let hash = magic::hash_board(0, magic, 13);
 
     ROOK_LOOKUP.lookup[rook_index as usize][hash]
+}
+
+pub fn get_indices_of_ones(board: u64) -> Vec<u32> {
+    let mut indices = Vec::new();
+    let mut board = board;
+    while board != 0 {
+        let trailing_zeros = board.trailing_zeros();
+        indices.push(trailing_zeros);
+        board &= !(1 << trailing_zeros);
+    }
+    indices
 }

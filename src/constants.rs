@@ -13,8 +13,15 @@ pub const KING_ID: u8 = 6;
 
 pub const A_FILE_MASK: u64 = 0x0101010101010101;
 pub const H_FILE_MASK: u64 = 0x8080808080808080;
-pub const RANK_8_MASK: u64 = 0xff00000000000000;
-pub const RANK_1_MASK: u64 = 0x00000000000000ff;
+
+pub const RANK_1_MASK: u64 = 0xff << (RANK_1_INDEX * 8);
+pub const RANK_2_MASK: u64 = 0xff << (RANK_2_INDEX * 8);
+pub const RANK_3_MASK: u64 = 0xff << (RANK_3_INDEX * 8);
+pub const RANK_4_MASK: u64 = 0xff << (RANK_4_INDEX * 8);
+pub const RANK_5_MASK: u64 = 0xff << (RANK_5_INDEX * 8);
+pub const RANK_6_MASK: u64 = 0xff << (RANK_6_INDEX * 8);
+pub const RANK_7_MASK: u64 = 0xff << (RANK_7_INDEX * 8);
+pub const RANK_8_MASK: u64 = 0xff << (RANK_8_INDEX * 8);
 
 pub const RANK_1_INDEX: u32 = 7;
 pub const RANK_2_INDEX: u32 = 6;
@@ -33,6 +40,8 @@ pub const FILE_D_INDEX: u32 = 3;
 pub const FILE_C_INDEX: u32 = 2;
 pub const FILE_B_INDEX: u32 = 1;
 pub const FILE_A_INDEX: u32 = 0;
+
+pub const ALL_PIECES_ID: [u8; 6] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID, KING_ID];
 
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {

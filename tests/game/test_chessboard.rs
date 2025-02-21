@@ -1,4 +1,4 @@
-use odyn::constants::START_FEN;
+use odyn::constants::{self, START_FEN};
 use odyn::game::{chess_move, chessboard};
 
 #[test]
@@ -189,4 +189,68 @@ fn test_correct_for_black_long_castle() {
         "2kr3r/ppp1qppp/2npbn2/2b1p3/4P3/2NP1Q1N/PPPBBPPP/R3K2R w KQ - 0 1";
 
     assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}
+
+#[test]
+fn test_number_of_pseudo_legal_moves_start_pos() {
+    let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
+
+    let legal_moves = cboard.pseudo_legal_moves(constants::WHITE_ID);
+
+    for move_ in legal_moves.iter() {
+        println!("{}", move_);
+    }
+
+    assert_eq!(20, legal_moves.len());
+}
+
+#[test]
+fn test_is_in_check_start_pos() {
+    let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
+    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    assert!(!is_in_check);
+}
+
+#[test]
+fn test_is_in_check_white_in_check() {
+    let cboard = chessboard::Chessboard::from_fen(
+        "rnbqk1nr/pppp1ppp/8/4p3/1b2P3/3P1N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
+        " ",
+    );
+    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    assert!(is_in_check);
+}
+
+#[test]
+fn test_is_in_check_pawn_attacks() {
+    let cboard = chessboard::Chessboard::from_fen(
+        "rnbqk1nr/ppp2ppp/8/4p3/1b1pP3/3PKN2/PPP2PPP/RNBQ1B1R w kq - 0 1",
+        " ",
+    );
+    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    assert!(is_in_check);
+}
+
+#[test]
+fn test_checkmate_scholar_mate() {
+    let cboard = chessboard::Chessboard::from_fen(
+        "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 1",
+        " ",
+    );
+
+    let is_checkmate = cboard.is_checkmate();
+    assert!(is_checkmate);
+}
+
+#[test]
+fn test_number_of_legal_moves_start_pos() {
+    let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
+
+    let legal_moves = cboard.compute_legal_moves();
+
+    for move_ in legal_moves.iter() {
+        println!("{}", move_);
+    }
+
+    assert_eq!(20, legal_moves.len());
 }

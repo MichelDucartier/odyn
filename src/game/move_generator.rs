@@ -3,7 +3,13 @@ use ilog::IntLog;
 use crate::constants;
 use crate::constants::A_FILE_MASK;
 use crate::constants::H_FILE_MASK;
+use crate::constants::RANK_1_INDEX;
 use crate::constants::RANK_1_MASK;
+use crate::constants::RANK_2_MASK;
+use crate::constants::RANK_3_INDEX;
+use crate::constants::RANK_6_INDEX;
+use crate::constants::RANK_7_MASK;
+use crate::constants::RANK_8_INDEX;
 use crate::constants::RANK_8_MASK;
 use crate::game::magic;
 use crate::game::utility;
@@ -40,11 +46,11 @@ pub fn generate_king_castle(color: u8, flags: u8) -> u64 {
     if color == constants::WHITE_ID {
         king_castle = (flags >> bitboard::WKCASTLE_F_INDEX) & 0b1;
         queen_castle = (flags >> bitboard::WQCASTLE_F_INDEX) & 0b1;
-        piece_offset = 56;
+        piece_offset = utility::square_to_index(RANK_1_INDEX, 0);
     } else {
         king_castle = (flags >> bitboard::BKCASTLE_F_INDEX) & 0b1;
         queen_castle = (flags >> bitboard::BQCASTLE_F_INDEX) & 0b1;
-        piece_offset = 0;
+        piece_offset = utility::square_to_index(RANK_8_INDEX, 0);
     }
 
     u64::from((king_castle << 6) | (queen_castle << 2)) << piece_offset
@@ -75,21 +81,25 @@ pub fn generate_queen_moves(queen_board: u64, occupancy: u64) -> u64 {
 pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
-        return (temp >> 8) & !occupancy;
+        let start_moves = (pawn_board & RANK_2_MASK) >> 16;
+        return (start_moves | (temp >> 8)) & !occupancy;
     }
 
     let temp = pawn_board & !RANK_1_MASK;
-    (temp << 8) & !occupancy
+    let start_moves = (pawn_board & RANK_7_MASK) << 16;
+    (start_moves | (temp << 8)) & !occupancy
 }
 
-pub fn generate_pawn_attacks(pawn_board: u64, color: u8) -> u64 {
+pub fn generate_pawn_attacks(pawn_board: u64, color: u8, en_passant: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
-        return (temp >> 7) | (temp >> 9);
+        let en_passant_attacks = (en_passant as u64) << RANK_6_INDEX;
+        return (temp >> 7) | (temp >> 9) | en_passant_attacks;
     }
 
     let temp = pawn_board & !RANK_1_MASK;
-    (temp << 7) | temp << 9
+    let en_passant_attacks = (en_passant as u64) << RANK_3_INDEX;
+    (temp << 7) | temp << 9 | en_passant_attacks
 }
 
 fn generate_sliding_moves(

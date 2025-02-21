@@ -1,5 +1,6 @@
 use odyn::{
     assert_eq_bitboard,
+    constants::{START_FEN, WHITE_ID},
     game::{bitboard::Bitboard, move_generator},
 };
 
@@ -132,5 +133,20 @@ fn test_bishop_moves_with_blocking() {
             bitboard.bishop_board,
             bitboard.white_board | bitboard.black_board
         ) & !bitboard.bishop_board
+    )
+}
+
+#[test]
+fn test_pawn_moves_on_starting_square() {
+    let bitboard = Bitboard::from_fen(START_FEN, " ");
+    let expected_moves = 0b0000000000000000111111111111111100000000000000000000000000000000;
+
+    let pawn_board = bitboard.pawn_board & bitboard.white_board;
+    let occupancy = bitboard.white_board | bitboard.black_board;
+    let color = WHITE_ID;
+
+    assert_eq_bitboard!(
+        expected_moves,
+        move_generator::generate_pawn_moves(pawn_board, occupancy, color)
     )
 }

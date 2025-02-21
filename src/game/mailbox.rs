@@ -7,7 +7,7 @@ use crate::constants::{
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MailboxBoard {
     board: [u8; 64],
 }
@@ -153,8 +153,6 @@ impl MailboxBoard {
 
         let start_rook_index = utility::square_to_index(king_row, rook_start_col) as usize;
         let end_rook_index = utility::square_to_index(king_row, rook_end_col) as usize;
-
-        println!("End rook index: {}", end_rook_index);
 
         // Move king and rook
         self.board[end_rook_index] = self.board[start_rook_index];

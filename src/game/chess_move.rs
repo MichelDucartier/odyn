@@ -1,7 +1,21 @@
-#[derive(Clone)]
+use core::fmt;
+use std::fmt::{Display, Formatter};
+
+use crate::game::utility;
+
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct Move {
     pub start_index: u32,
     pub end_index: u32,
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let start_string = utility::index_to_string(self.start_index);
+        let end_string = utility::index_to_string(self.end_index);
+
+        write!(f, "Move {} -> {}", start_string, end_string)
+    }
 }
 
 /// MSB

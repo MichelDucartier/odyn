@@ -1,5 +1,3 @@
-use crate::engine::bot;
-
 use clap::Parser;
 
 #[derive(Parser)]
@@ -9,7 +7,6 @@ pub struct EngineArgs {
 }
 
 pub struct Controller {
-    engine: bot::ChessEngine,
     is_ready: bool,
 }
 
