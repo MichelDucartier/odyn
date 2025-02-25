@@ -38,10 +38,7 @@ fn test_to_from_identity_en_passant_black_fen() {
 fn test_correct_after_pawn_move() {
     let mut cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
-    let move_ = chess_move::Move {
-        start_index: 52,
-        end_index: 36,
-    };
+    let move_ = chess_move::Move::new_no_promotion(52, 36);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
@@ -54,10 +51,7 @@ fn test_correct_after_bishop_move() {
     const FEN: &str = "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 0 1";
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
-    let move_ = chess_move::Move {
-        start_index: 5,
-        end_index: 26,
-    };
+    let move_ = chess_move::Move::new_no_promotion(5, 26);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str = "rnbqk1nr/pppp1ppp/8/2b1p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 0 1";
@@ -70,10 +64,7 @@ fn test_correct_for_en_passant() {
     const FEN: &str = "r1bqk2r/pppp1ppp/3b1n2/4p2P/2BnP3/5N2/PPPP1PP1/RNBQK2R b KQkq - 0 1";
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
-    let move_ = chess_move::Move {
-        start_index: 14,
-        end_index: 30,
-    };
+    let move_ = chess_move::Move::new_no_promotion(14, 30);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =
@@ -81,10 +72,7 @@ fn test_correct_for_en_passant() {
 
     assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
 
-    let en_passant_move = chess_move::Move {
-        start_index: 31,
-        end_index: 22,
-    };
+    let en_passant_move = chess_move::Move::new_no_promotion(31, 22);
     cboard.make_move_unchecked(en_passant_move);
 
     const FEN_AFTER_EN_PASSANT: &str =
@@ -97,10 +85,7 @@ fn test_correct_for_en_passant_without_taking() {
     const FEN: &str = "r1bqk2r/pppp1ppp/3b1n2/4p2P/2BnP3/5N2/PPPP1PP1/RNBQK2R b KQkq - 0 1";
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
-    let move_ = chess_move::Move {
-        start_index: 14,
-        end_index: 30,
-    };
+    let move_ = chess_move::Move::new_no_promotion(14, 30);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =
@@ -108,10 +93,7 @@ fn test_correct_for_en_passant_without_taking() {
 
     assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
 
-    let not_en_passant = chess_move::Move {
-        start_index: 57,
-        end_index: 42,
-    };
+    let not_en_passant = chess_move::Move::new_no_promotion(57, 42);
     cboard.make_move_unchecked(not_en_passant);
 
     const FEN_AFTER_EN_PASSANT: &str =
@@ -125,10 +107,7 @@ fn test_correct_for_white_short_castle() {
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
     // Castle move
-    let move_ = chess_move::Move {
-        start_index: 60,
-        end_index: 62,
-    };
+    let move_ = chess_move::Move::new_no_promotion(60, 62);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =
@@ -143,10 +122,7 @@ fn test_correct_for_white_long_castle() {
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
     // Castle move
-    let move_ = chess_move::Move {
-        start_index: 60,
-        end_index: 58,
-    };
+    let move_ = chess_move::Move::new_no_promotion(60, 58);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =
@@ -161,10 +137,7 @@ fn test_correct_for_black_short_castle() {
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
     // Castle move
-    let move_ = chess_move::Move {
-        start_index: 4,
-        end_index: 6,
-    };
+    let move_ = chess_move::Move::new_no_promotion(4, 6);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =
@@ -179,10 +152,7 @@ fn test_correct_for_black_long_castle() {
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
 
     // Castle move
-    let move_ = chess_move::Move {
-        start_index: 4,
-        end_index: 2,
-    };
+    let move_ = chess_move::Move::new_no_promotion(4, 2);
     cboard.make_move_unchecked(move_);
 
     const FEN_AFTER_MOVE: &str =

@@ -1,7 +1,7 @@
 use super::chess_move;
 use super::{chess_move::Move, utility};
 use crate::constants::{
-    BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
+    self, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
     FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, ROOK_ID, WHITE_ID,
 };
 use lazy_static::lazy_static;
@@ -96,7 +96,7 @@ impl MailboxBoard {
     pub fn move_piece(&mut self, move_: &Move) -> u16 {
         let (start_piece, color_id) = self.get_piece(move_.start_index);
         let (_start_row, start_col) = utility::index_to_square(move_.start_index);
-        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+        let (end_row, end_col) = utility::index_to_square(move_.end_index);
 
         // Flag to return
         let mut flags: u16 = 0;
@@ -121,10 +121,27 @@ impl MailboxBoard {
             return flags;
         }
 
+        // Promotion
+        if start_piece == PAWN_ID && Self::is_last_rank(end_row, color_id) {
+            if !constants::POSSIBLE_PROMOTION.contains(&move_.promotion_piece) {
+                panic!("Invalid promotion piece: {}", move_.promotion_piece);
+            }
+
+            self.board[move_.end_index as usize] = piece_id(move_.promotion_piece, color_id);
+            self.board[move_.start_index as usize] = EMPTY_ID;
+
+            flags |= 1 << chess_move::PROMOTION_INDEX; // set promotion flag
+        }
+
         self.board[move_.end_index as usize] = self.board[move_.start_index as usize];
         self.board[move_.start_index as usize] = EMPTY_ID;
 
         flags
+    }
+
+    const fn is_last_rank(rank: u32, color_id: u8) -> bool {
+        (color_id == WHITE_ID && rank == constants::RANK_8_INDEX)
+            || (color_id == BLACK_ID && rank == constants::RANK_1_INDEX)
     }
 
     fn en_passant_move(&mut self, move_: &Move) {

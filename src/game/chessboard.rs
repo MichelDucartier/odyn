@@ -114,10 +114,7 @@ impl Chessboard {
         while remaining_moves != 0 {
             let end_index = remaining_moves.trailing_zeros();
             remaining_moves &= !(1_u64 << end_index);
-            moves.insert(Move {
-                start_index,
-                end_index,
-            });
+            moves.insert(Move::new_no_promotion(start_index, end_index));
         }
 
         moves
@@ -161,13 +158,7 @@ mod tests {
         let piece_moves = 0b1010;
         let moves = super::Chessboard::unpack_moves(start_index, piece_moves);
         assert_eq!(moves.len(), 2);
-        assert!(moves.contains(&super::Move {
-            start_index,
-            end_index: 1
-        }));
-        assert!(moves.contains(&super::Move {
-            start_index,
-            end_index: 3
-        }));
+        assert!(moves.contains(&super::Move::new_no_promotion(start_index, 1)));
+        assert!(moves.contains(&super::Move::new_no_promotion(start_index, 3)));
     }
 }

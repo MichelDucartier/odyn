@@ -78,10 +78,7 @@ fn test_mailbox_correct_after_pawn_move() {
     let mut mboard = mailbox::MailboxBoard::from_fen(START_FEN, " ");
 
     // Make move
-    let move_ = chess_move::Move {
-        start_index: 51,
-        end_index: 35,
-    };
+    let move_ = chess_move::Move::new_no_promotion(51, 35);
     let flags = mboard.move_piece(&move_);
 
     const FEN_AFTER_MOVE: &str = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 1";
@@ -98,10 +95,7 @@ fn test_mailbox_correct_after_black_move() {
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
 
     // Make move
-    let move_ = chess_move::Move {
-        start_index: 12,
-        end_index: 28,
-    };
+    let move_ = chess_move::Move::new_no_promotion(12, 28);
     let flags = mboard.move_piece(&move_);
 
     const FEN_AFTER_MOVE: &str = "rnbqkbnr/pppp1ppp/8/4p3/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 1";
@@ -118,10 +112,7 @@ fn test_mailbox_correct_after_bishop_capture() {
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
 
     // Make move
-    let move_ = chess_move::Move {
-        start_index: 34,
-        end_index: 6,
-    };
+    let move_ = chess_move::Move::new_no_promotion(34, 6);
     let flags = mboard.move_piece(&move_);
 
     const FEN_AFTER_MOVE: &str = "rnbqkbBr/pppp2pp/5p2/4p3/4P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 1";
@@ -138,10 +129,7 @@ fn test_mailbox_correct_after_bishop_capture() {
 fn test_mailbox_correct_after_white_short_castle() {
     const FEN: &str = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1";
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
-    let move_ = chess_move::Move {
-        start_index: 60,
-        end_index: 62,
-    };
+    let move_ = chess_move::Move::new_no_promotion(60, 62);
 
     let flags = mboard.move_piece(&move_);
 
@@ -160,10 +148,7 @@ fn test_mailbox_correct_after_white_short_castle() {
 fn test_mailbox_correct_after_black_short_castle() {
     const FEN: &str = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w HQkq - 0 1";
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
-    let move_ = chess_move::Move {
-        start_index: 4,
-        end_index: 6,
-    };
+    let move_ = chess_move::Move::new_no_promotion(4, 6);
 
     let flags = mboard.move_piece(&move_);
 
@@ -182,10 +167,7 @@ fn test_mailbox_correct_after_black_short_castle() {
 fn test_mailbox_correct_after_white_long_castle() {
     const FEN: &str = "r1bqk2r/ppp1bppp/2np1n2/4p1B1/4P3/2NP4/PPPQ1PPP/R3KBNR w KQkq - 0 1";
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
-    let move_ = chess_move::Move {
-        start_index: 60,
-        end_index: 58,
-    };
+    let move_ = chess_move::Move::new_no_promotion(60, 58);
 
     let flags = mboard.move_piece(&move_);
 
@@ -204,10 +186,7 @@ fn test_mailbox_correct_after_white_long_castle() {
 fn test_mailbox_correct_after_black_long_castle() {
     const FEN: &str = "r3kbnr/ppp2ppp/2np1q2/4p3/2B1P1b1/2NP1N2/PPP2PPP/R1BQ1RK1 w HQkq - 0 1";
     let mut mboard = mailbox::MailboxBoard::from_fen(FEN, " ");
-    let move_ = chess_move::Move {
-        start_index: 4,
-        end_index: 2,
-    };
+    let move_ = chess_move::Move::new_no_promotion(4, 2);
 
     let flags = mboard.move_piece(&move_);
 

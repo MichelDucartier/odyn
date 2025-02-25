@@ -42,6 +42,7 @@ pub const FILE_B_INDEX: u32 = 1;
 pub const FILE_A_INDEX: u32 = 0;
 
 pub const ALL_PIECES_ID: [u8; 6] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID, KING_ID];
+pub const POSSIBLE_PROMOTION: [u8; 5] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID];
 
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {

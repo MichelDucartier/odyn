@@ -13,10 +13,7 @@ use crate::constants::{
     FILE_G_INDEX, FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_3_INDEX, RANK_4_INDEX,
     RANK_5_INDEX, RANK_6_INDEX, ROOK_ID, WHITE_ID,
 };
-use std::{
-    cmp,
-    collections::{HashMap, HashSet},
-};
+use std::{cmp, collections::HashMap};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Bitboard {
@@ -302,23 +299,21 @@ impl Bitboard {
     pub fn move_piece(&mut self, move_: &Move, flags: u16) {
         let is_enpassant = chess_move::get_en_passant_flag(flags);
         let is_castle = chess_move::get_castle_flag(flags);
+        let is_promotion = chess_move::get_promotion_flag(flags);
 
         let piece_id = chess_move::get_piece_flag(flags);
         let color_id = chess_move::get_color_flag(flags);
 
-        // println!("Piece ID: {}", piece_id);
-        // println!("Color ID: {}", color_id);
-
         let opposite_color = constants::opposite(chess_move::get_color_flag(flags));
         let captured_piece_id = chess_move::get_captured_piece_flag(flags);
 
-        // println!("Captured Piece ID: {}", captured_piece_id);
-        // println!("Captured Color ID: {}", opposite_color)
-
+        // En passant move
         if is_enpassant {
             self.en_passant_move(move_, color_id);
         } else if is_castle {
             self.castle_move(move_, color_id);
+        } else if is_promotion {
+            self.promotion_move(move_, color_id);
         } else {
             // Remove piece from destination position + add it to the destination
             self.remove_piece_from_board(piece_id, color_id, move_.start_index);
@@ -338,6 +333,11 @@ impl Bitboard {
 
         // Update turn
         self.flags ^= 1 << TURN_F_INDEX;
+    }
+
+    fn promotion_move(&mut self, move_: &Move, color_id: u8) {
+        self.remove_piece_from_board(PAWN_ID, color_id, move_.start_index);
+        self.add_piece_to_board(move_.promotion_piece, color_id, move_.end_index);
     }
 
     fn update_en_passant_flags(&mut self, piece_id: u8, color_id: u8, move_: &Move) {
@@ -438,11 +438,6 @@ impl Bitboard {
         self.add_piece_to_board(ROOK_ID, color_id, rook_end_index);
     }
 
-    // fn generate_full_attacks(&self, piece_id: u8, color_id: u8) -> u64 {
-    //     let piece_board = self.get_piece_board(piece_id).unwrap() & self.get_color_board(color_id);
-    //     self.generate_attacks(piece_id, color_id, piece_board)
-    // }
-
     fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let occupancy = self.white_board | self.black_board;
 
@@ -485,19 +480,8 @@ impl Bitboard {
     pub fn generate_legal_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let piece_attacks = self.generate_effective_attacks(piece_id, color_id, piece_board);
         let piece_moves = self.generate_moves(piece_id, color_id, piece_board);
-        // let occupancy = self.white_board | self.black_board;
 
         piece_moves | piece_attacks
-
-        // match piece_id {
-        //     constants::KING_ID => {
-        //         piece_moves | piece_attacks | generate_king_castle(color_id, self.flags)
-        //     }
-        //     constants::PAWN_ID => {
-        //         piece_moves | piece_attacks | generate_pawn_moves(piece_board, occupancy, color_id)
-        //     }
-        //     _ => piece_moves | piece_attacks,
-        // }
     }
 
     pub fn is_in_check(&self, color_id: u8) -> bool {
