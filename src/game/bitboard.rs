@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use smallvec::{smallvec, SmallVec};
 
 use super::{
@@ -247,8 +248,7 @@ impl Bitboard {
             if c.is_numeric() {
                 board_index += match c.to_digit(10) {
                     Some(x) => x,
-                    None => panic!("Invalid fen, parsing character {c} into a digit"),
-                };
+                    None => panic!("Invalid fen, parsing character {c} into a digit"), };
                 continue;
             }
 
@@ -307,6 +307,11 @@ impl Bitboard {
         let opposite_color = constants::opposite(chess_move::get_color_flag(flags));
         let captured_piece_id = chess_move::get_captured_piece_flag(flags);
 
+        // Remove captured piece if any
+        if captured_piece_id != EMPTY_ID {
+            self.remove_piece_from_board(captured_piece_id, opposite_color, move_.end_index);
+        }
+
         // En passant move
         if is_enpassant {
             self.en_passant_move(move_, color_id);
@@ -318,11 +323,6 @@ impl Bitboard {
             // Remove piece from destination position + add it to the destination
             self.remove_piece_from_board(piece_id, color_id, move_.start_index);
             self.add_piece_to_board(piece_id, color_id, move_.end_index);
-
-            // Remove captured piece if any
-            if captured_piece_id != EMPTY_ID {
-                self.remove_piece_from_board(captured_piece_id, opposite_color, move_.end_index);
-            }
         }
 
         // Update en passant flags
@@ -485,18 +485,27 @@ impl Bitboard {
     }
 
     pub fn is_in_check(&self, color_id: u8) -> bool {
-        let opponent_id = constants::opposite(color_id);
         let allied_king = self.king_board & self.get_color_board(color_id);
+        self.is_attacked(color_id, allied_king)
+    }
+
+    fn is_attacked(&self, color_id: u8, board: u64) -> bool {
+        let opponent_id = constants::opposite(color_id);
         let opponent_board = self.get_color_board(opponent_id);
 
         for piece_id in ALL_PIECES_ID {
             let piece_board = self.get_piece_board(piece_id).unwrap() & opponent_board;
             let piece_attacks = self.generate_attacks(piece_id, opponent_id, piece_board);
-            if allied_king & piece_attacks != 0 {
+            if board & piece_attacks != 0 {
                 return true;
             }
         }
 
         false
+    }
+
+    pub fn is_castle_in_check(&self, move_: Move, color_id: u8) -> bool {
+        let king_travel = utility::fill_between_indices(move_.start_index, move_.end_index);
+        self.is_attacked(color_id, king_travel)
     }
 }

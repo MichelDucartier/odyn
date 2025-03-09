@@ -51,3 +51,5 @@ pub fn opposite(color_id: u8) -> u8 {
         _ => panic!("Invalid color id passed: {}", color_id),
     }
 }
+
+

@@ -224,3 +224,30 @@ fn test_number_of_legal_moves_start_pos() {
 
     assert_eq!(20, legal_moves.len());
 }
+
+#[test]
+fn test_capture_when_same_type() {}
+
+#[test]
+fn test_promotion_white_no_capture() {
+    const FEN: &str = "8/2k3P1/4n3/1n6/4K3/2p3N1/8/8 w - - 0 1";
+    let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
+
+    let move_ = chess_move::Move::new(14, 6, constants::QUEEN_ID);
+    cboard.make_move_unchecked(move_);
+
+    const FEN_AFTER_MOVE: &str = "6Q1/2k5/4n3/1n6/4K3/2p3N1/8/8 b - - 0 1";
+    assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}
+
+#[test]
+fn test_promotion_black_capture() {
+    const FEN: &str = "8/2k5/4n1P1/1n6/4K3/6N1/2p5/1B6 b - - 0 1";
+    let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
+
+    let move_ = chess_move::Move::new(50, 57, constants::KNIGHT_ID);
+    cboard.make_move_unchecked(move_);
+
+    const FEN_AFTER_MOVE: &str = "8/2k5/4n1P1/1n6/4K3/6N1/8/1n6 w - - 0 1";
+    assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}

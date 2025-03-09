@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use super::{
     bitboard::Bitboard,
-    chess_move::Move,
+    chess_move::{self, Move},
     mailbox::{self, MailboxBoard},
     utility,
 };
@@ -59,9 +59,10 @@ impl Chessboard {
         bitboard_fen.join(separator)
     }
 
-    pub fn make_move_unchecked(&mut self, move_: Move) {
+    pub fn make_move_unchecked(&mut self, move_: Move) -> u16 {
         let flags = self.mailbox.move_piece(&move_);
         self.bitboard.move_piece(&move_, flags);
+        flags
     }
 
     pub fn from_moves(moves: Vec<Move>) -> Chessboard {
@@ -134,13 +135,25 @@ impl Chessboard {
         !self.is_in_check(current_color) && self.exists_legal_moves(current_color)
     }
 
+    pub fn is_castle_in_check(&self, move_: Move, color_id: u8) -> bool {
+        self.bitboard.is_castle_in_check(move_, color_id)
+    }
+
     fn exists_legal_moves(&self, current_color: u8) -> bool {
         let pseudo_legal_moves = self.pseudo_legal_moves(current_color);
 
         for move_ in pseudo_legal_moves {
             let mut cboard_copy = self.clone();
-            cboard_copy.make_move_unchecked(move_);
+            let flags = cboard_copy.make_move_unchecked(move_);
 
+            // The move that we look at is a castle move
+            if chess_move::get_castle_flag(flags)
+                && !self.bitboard.is_castle_in_check(move_, current_color)
+            {
+                return true;
+            }
+
+            // Not a castle move
             if !cboard_copy.is_in_check(current_color) {
                 return true;
             }

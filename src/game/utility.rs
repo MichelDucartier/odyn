@@ -1,3 +1,5 @@
+use std::cmp::{max, min};
+
 use super::magic::{self, BISHOP_LOOKUP, ROOK_LOOKUP};
 use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
 use bit_reverse::ParallelReverse;
@@ -213,4 +215,14 @@ pub fn get_indices_of_ones(board: u64) -> Vec<u32> {
         board &= !(1 << trailing_zeros);
     }
     indices
+}
+
+pub fn fill_between_indices(index_1: u32, index_2: u32) -> u64 {
+    let min_index = min(index_1, index_2);
+    let max_index = max(index_1, index_2);
+
+    let max_ones = (1_u64 << (max_index + 1)) - 1;
+    let min_ones = (1_u64 << min_index) - 1;
+
+    max_ones ^ min_ones
 }
