@@ -65,8 +65,8 @@ impl Chessboard {
         flags
     }
 
-    pub fn from_moves(moves: Vec<Move>) -> Chessboard {
-        let mut cboard = Chessboard::from_fen(START_FEN, " ");
+    pub fn from_moves(start_fen: &str, moves: Vec<Move>) -> Chessboard {
+        let mut cboard = Chessboard::from_fen(start_fen, " ");
         for move_ in moves {
             cboard.make_move_unchecked(move_);
         }

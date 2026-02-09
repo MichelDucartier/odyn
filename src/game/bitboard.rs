@@ -248,7 +248,8 @@ impl Bitboard {
             if c.is_numeric() {
                 board_index += match c.to_digit(10) {
                     Some(x) => x,
-                    None => panic!("Invalid fen, parsing character {c} into a digit"), };
+                    None => panic!("Invalid fen, parsing character {c} into a digit"),
+                };
                 continue;
             }
 
@@ -500,7 +501,6 @@ impl Bitboard {
                 return true;
             }
         }
-
         false
     }
 

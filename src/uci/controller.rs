@@ -1,29 +1,40 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
-#[derive(Parser)]
-pub struct EngineArgs {
-    pub pattern: String,
-    pub path: String,
+use crate::{
+    constants::{
+        DEBUG_COMMAND, IS_READY_COMMAND, POSITION_COMMAND, READY_OK, SET_OPTION_COMMAND,
+        UCINEWGAME_COMMAND,
+    },
+    engine::engine::ChessEngine,
+};
+
+pub struct Controller<T: ChessEngine> {
+    chess_engine: T,
+    debug: bool,
 }
 
-pub struct Controller {
-    is_ready: bool,
-}
-
-impl Controller {
-    pub fn uci(&self) -> String {
-        "uciok".to_string()
+impl<T: ChessEngine> Controller<T> {
+    pub fn new(chess_engine: T) -> Self {
+        Controller {
+            chess_engine: chess_engine,
+            debug: false,
+        }
     }
 
-    pub fn is_ready(&self) -> bool {
-        self.is_ready
+    fn handle_position_command(&mut self, command: String) -> Option<String> {
+        None
     }
 
-    pub fn uci_new_game(&self) {}
+    fn handle_debug(&mut self) -> Option<String> {
+        self.debug = !self.debug;
+        None
+    }
 
-    pub fn position(&self, fen: &str, moves: Vec<&str>) {}
-    pub fn go(&self, args: EngineArgs) {}
-    pub fn stop(&self) {}
-    pub fn ponder_hit(&self) {}
-    pub fn quit(&self) {}
+    fn handle_is_ready(&self) -> Option<String> {
+        Some(READY_OK.to_string())
+    }
+
+    fn handle_set_option(&self) -> Option<String> {
+        None
+    }
 }

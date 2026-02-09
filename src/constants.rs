@@ -44,6 +44,21 @@ pub const FILE_A_INDEX: u32 = 0;
 pub const ALL_PIECES_ID: [u8; 6] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID, KING_ID];
 pub const POSSIBLE_PROMOTION: [u8; 5] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID];
 
+pub const IS_READY_COMMAND: &str = "isready";
+pub const SET_OPTION_COMMAND: &str = "setoption";
+pub const DEBUG_COMMAND: &str = "debug";
+pub const UCI_COMMAND: &str = "uci";
+pub const REGISTER_COMMAND: &str = "register";
+pub const UCINEWGAME_COMMAND: &str = "ucinewgame";
+pub const POSITION_COMMAND: &str = "position";
+pub const GO_COMMAND: &str = "go";
+pub const STOP_COMMAND: &str = "stop";
+pub const PONDERHIT_COMMAND: &str = "ponderhit";
+pub const QUIT_COMMAND: &str = "quit";
+
+pub const READY_OK: &str = "readyok";
+pub const UCI_OK: &str = "uciok";
+
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {
         WHITE_ID => BLACK_ID,
@@ -51,5 +66,3 @@ pub fn opposite(color_id: u8) -> u8 {
         _ => panic!("Invalid color id passed: {}", color_id),
     }
 }
-
-

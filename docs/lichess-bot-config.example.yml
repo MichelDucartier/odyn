@@ -1,0 +1,14 @@
+# This is a minimal starting point.
+# Copy this file into your lichess-bot repo as config.yml and edit.
+
+token: "PUT_YOUR_LICHESS_BOT_TOKEN_HERE"
+
+engine:
+  # Binary name (must match the file in engine.dir)
+  name: "odyn_uci"
+  protocol: "uci"
+  # Absolute path to the directory containing the engine binary.
+  dir: "/ABSOLUTE/PATH/TO/odyn/target/release"
+
+# Many lichess-bot settings are omitted here.
+# Keep the rest of your config.yml as recommended by lichess-bot.
