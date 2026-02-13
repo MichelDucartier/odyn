@@ -4,6 +4,33 @@ use odyn::{
     game::{bitboard::Bitboard, move_generator},
 };
 
+fn rook_attacks_naive(rook_index: u32, occupancy: u64) -> u64 {
+    let row = (rook_index / 8) as i32;
+    let col = (rook_index % 8) as i32;
+    let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+    let mut attacks = 0;
+
+    for (dr, dc) in directions {
+        let mut r = row + dr;
+        let mut c = col + dc;
+
+        while (0..8).contains(&r) && (0..8).contains(&c) {
+            let index = (r * 8 + c) as u32;
+            attacks |= 1u64 << index;
+
+            if (occupancy & (1u64 << index)) != 0 {
+                break;
+            }
+
+            r += dr;
+            c += dc;
+        }
+    }
+
+    attacks
+}
+
 #[test]
 fn test_king_moves() {
     let start_fen = "8/8/8/8/3K4/8/8/8 w - - 0 1";
@@ -105,6 +132,44 @@ fn test_rook_moves_with_blocking() {
 }
 
 #[test]
+fn test_black_rook_moves_with_occupancy() {
+    let start_fen = "8/8/3p4/8/1P1r1n2/8/3B4/8 b - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let rook_board = bitboard.rook_board & bitboard.black_board;
+    let occupancy = bitboard.white_board | bitboard.black_board;
+    let expected_moves = (1u64 << 19)
+        | (1u64 << 27)
+        | (1u64 << 33)
+        | (1u64 << 34)
+        | (1u64 << 36)
+        | (1u64 << 37)
+        | (1u64 << 43)
+        | (1u64 << 51);
+    let generated_moves = move_generator::generate_rook_moves(rook_board, occupancy) & !rook_board;
+
+    assert_eq_bitboard!(expected_moves, generated_moves);
+
+    // Defensive check: compare against a naive ray-walk generator from d4 (index 35).
+    assert_eq_bitboard!(rook_attacks_naive(35, occupancy), generated_moves);
+}
+
+#[test]
+fn test_black_rook_moves_in_a8_corner_with_occupancy() {
+    let start_fen = "r1B5/8/p7/8/8/8/8/8 b - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let rook_board = bitboard.rook_board & bitboard.black_board;
+    let occupancy = bitboard.white_board | bitboard.black_board;
+    let expected_moves = (1u64 << 1) | (1u64 << 2) | (1u64 << 8) | (1u64 << 16);
+    let generated_moves = move_generator::generate_rook_moves(rook_board, occupancy) & !rook_board;
+
+    assert_eq_bitboard!(expected_moves, generated_moves);
+
+    assert_eq_bitboard!(rook_attacks_naive(0, occupancy), generated_moves);
+}
+
+#[test]
 fn test_bishop_moves_single_bishop() {
     let start_fen = "8/8/8/8/8/2B5/8/8 w - - 0 1";
     let bitboard = Bitboard::from_fen(start_fen, " ");
@@ -148,5 +213,22 @@ fn test_pawn_moves_on_starting_square() {
     assert_eq_bitboard!(
         expected_moves,
         move_generator::generate_pawn_moves(pawn_board, occupancy, color)
+    )
+}
+
+#[test]
+fn test_pawn_attacks_on_a_file() {
+    let bitboard = Bitboard::from_fen(
+        "rnbqkbnr/ppppppp1/7p/8/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 0 2",
+        " ",
+    );
+    let expected_attacks = 0b0000000000000000111111110000000000000010000000000000000000000000;
+
+    let pawn_board = bitboard.pawn_board & bitboard.white_board;
+    let color = WHITE_ID;
+
+    assert_eq_bitboard!(
+        expected_attacks,
+        move_generator::generate_pawn_attacks(pawn_board, color, 0)
     )
 }

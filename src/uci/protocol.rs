@@ -1,7 +1,7 @@
 use crate::constants::{self, START_FEN, UCI_OK};
 use crate::engine::engine::ChessEngine;
+use crate::format_chessboard;
 use crate::game::chess_move::Move;
-use crate::game::chessboard::Chessboard;
 use crate::game::utility;
 use anyhow::{anyhow, Result};
 use std::io::Write;
@@ -71,23 +71,13 @@ impl<T: ChessEngine> UciWrapper<T> {
                 // Lichess-bot is fine with a single `bestmove` line.
                 self.engine
                     .position(&self.position.fen, self.position.moves.clone());
+
                 let requested = self.engine.current_best_move();
 
-                // Guardrail: if the engine returns an illegal move, fall back to a legal one.
-                // This keeps lichess-bot/GUIs from aborting the game due to illegal moves.
-                let board = Chessboard::from_moves(&self.position.fen, self.position.moves.clone());
-                let legal = board.compute_legal_moves();
-
-                if legal.is_empty() {
-                    writeln!(out, "bestmove 0000")?;
-                } else if legal.contains(&requested) {
-                    writeln!(out, "bestmove {}", move_to_uci(requested))?;
+                if let Some((mv, _val)) = requested {
+                    writeln!(out, "bestmove {}", move_to_uci(mv))?;
                 } else {
-                    // Deterministic choice: pick the lexicographically smallest UCI move.
-                    let mut legal_vec: Vec<Move> = legal.into_iter().collect();
-                    legal_vec.sort_by(|a, b| move_to_uci(*a).cmp(&move_to_uci(*b)));
-                    let fallback = legal_vec[0];
-                    writeln!(out, "bestmove {}", move_to_uci(fallback))?;
+                    writeln!(out, "bestmove 0000")?;
                 }
             }
             constants::STOP_COMMAND => {

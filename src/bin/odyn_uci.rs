@@ -1,14 +1,15 @@
 use anyhow::Result;
-use odyn::engine::implementations::mock::mock_engine::MockEngine;
-use odyn::uci::protocol::UciWrapper;
+use odyn::{
+    engine::implementations::{odyn_engine::OdynEngine, odyn_evaluator::OdynEvaluator},
+    uci::protocol::UciWrapper,
+};
 use std::io::{self, BufRead};
 
 fn main() -> Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    // Swap MockEngine with your real engine when ready.
-    let engine = MockEngine {};
+    let engine = OdynEngine::new(OdynEvaluator);
     let mut uci = UciWrapper::new(engine);
 
     for line in stdin.lock().lines() {

@@ -1,4 +1,7 @@
 use std::collections::HashSet;
+use std::fmt;
+
+use ilog::IntLog;
 
 use super::{
     bitboard::Bitboard,
@@ -6,10 +9,10 @@ use super::{
     mailbox::{self, MailboxBoard},
     utility,
 };
-use crate::{
-    constants::{self, START_FEN},
-    game::bitboard,
+use crate::constants::{
+    BISHOP_ID, EMPTY_ID, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, ROOK_ID, WHITE_ID,
 };
+use crate::game::bitboard;
 
 #[derive(Default, Debug)]
 pub struct Chessboard {
@@ -51,6 +54,22 @@ impl Chessboard {
         }
     }
 
+    pub fn get_iterator_on_pieces(&self) -> impl Iterator<Item = (u32, (u8, u8))> + '_ {
+        let mut remaining = self.bitboard.white_board | self.bitboard.black_board;
+
+        std::iter::from_fn(move || {
+            if remaining == 0 {
+                return None;
+            }
+
+            let idx = remaining.trailing_zeros();
+            remaining &= remaining - 1;
+
+            let piece = self.mailbox.get_piece(idx);
+            Some((idx, piece))
+        })
+    }
+
     pub fn to_fen(&self, separator: &str) -> String {
         let mut bitboard_fen = self.bitboard.to_fen();
         let move_counts = format!("{} {}", self.black_moves, self.white_moves);
@@ -73,56 +92,58 @@ impl Chessboard {
         cboard
     }
 
-    pub fn compute_legal_moves(&self) -> HashSet<Move> {
+    pub fn compute_legal_moves(&self) -> impl Iterator<Item = chess_move::Move> + '_ {
         let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
         let pseudo_legal_moves = self.pseudo_legal_moves(current_color);
 
-        let mut legal_moves = HashSet::new();
-        for move_ in pseudo_legal_moves {
+        pseudo_legal_moves.filter(move |move_| {
             let mut cboard_copy = self.clone();
-            cboard_copy.make_move_unchecked(move_);
-            if !cboard_copy.is_in_check(current_color) {
-                legal_moves.insert(move_);
-            }
-        }
-
-        legal_moves
+            cboard_copy.make_move_unchecked(*move_);
+            !cboard_copy.is_in_check(current_color)
+        })
     }
 
-    pub fn pseudo_legal_moves(&self, color_id: u8) -> HashSet<Move> {
-        let mut legal_moves = HashSet::new();
-
+    pub fn pseudo_legal_moves(&self, color_id: u8) -> impl Iterator<Item = chess_move::Move> + '_ {
         let allied_board = self.bitboard.get_color_board(color_id);
-        let allied_indices = utility::get_indices_of_ones(allied_board);
 
-        for start_index in allied_indices {
-            let (piece_id, _color_id) = self.mailbox.get_piece(start_index);
-            let piece_moves =
-                self.bitboard
-                    .generate_legal_moves(piece_id, color_id, 1_u64 << start_index);
-            let moves = Self::unpack_moves(start_index, piece_moves);
-            legal_moves.extend(moves);
-        }
-
-        legal_moves
+        utility::get_indices_of_ones(allied_board)
+            .into_iter()
+            .flat_map(move |start_index| {
+                let (piece_id, _color_id) = self.mailbox.get_piece(start_index);
+                let piece_moves =
+                    self.bitboard
+                        .generate_legal_moves(piece_id, color_id, 1_u64 << start_index);
+                Self::unpack_moves(start_index, piece_moves)
+            })
     }
 
-    fn unpack_moves(start_index: u32, piece_moves: u64) -> HashSet<Move> {
-        let mut moves = HashSet::new();
+    fn unpack_moves(start_index: u32, piece_moves: u64) -> impl Iterator<Item = chess_move::Move> {
+        // let mut moves = HashSet::new();
 
         let mut remaining_moves = piece_moves;
 
-        while remaining_moves != 0 {
+        // while remaining_moves != 0 {
+        //     let end_index = remaining_moves.trailing_zeros();
+        //     remaining_moves &= !(1_u64 << end_index);
+        //     moves.insert(Move::new_no_promotion(start_index, end_index));
+        // }
+
+        std::iter::from_fn(move || {
+            if remaining_moves == 0 {
+                return None;
+            }
             let end_index = remaining_moves.trailing_zeros();
             remaining_moves &= !(1_u64 << end_index);
-            moves.insert(Move::new_no_promotion(start_index, end_index));
-        }
-
-        moves
+            Some(Move::new_no_promotion(start_index, end_index))
+        })
     }
 
     pub fn is_in_check(&self, color_id: u8) -> bool {
         self.bitboard.is_in_check(color_id)
+    }
+
+    pub fn current_turn(&self) -> u8 {
+        self.bitboard.current_turn()
     }
 
     pub fn is_checkmate(&self) -> bool {
@@ -163,15 +184,107 @@ impl Chessboard {
     }
 }
 
+/// Returns the character representing a piece given its piece_id and color_id.
+///
+/// White pieces are uppercase, black pieces are lowercase.
+/// Empty squares return `'.'`.
+fn piece_to_char(piece_id: u8, color_id: u8) -> char {
+    let c = match piece_id {
+        PAWN_ID => 'p',
+        KNIGHT_ID => 'n',
+        BISHOP_ID => 'b',
+        ROOK_ID => 'r',
+        QUEEN_ID => 'q',
+        KING_ID => 'k',
+        EMPTY_ID => return '.',
+        _ => '?',
+    };
+    if color_id == WHITE_ID {
+        c.to_ascii_uppercase()
+    } else {
+        c
+    }
+}
+
+impl fmt::Display for Chessboard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "  +---+---+---+---+---+---+---+---+")?;
+        for row in 0..8u32 {
+            let rank_label = 8 - row;
+            write!(f, "{rank_label} ")?;
+            for col in 0..8u32 {
+                let index = utility::square_to_index(row, col);
+                let (piece_id, color_id) = self.mailbox.get_piece(index);
+                let ch = piece_to_char(piece_id, color_id);
+                write!(f, "| {ch} ")?;
+            }
+            writeln!(f, "|")?;
+            writeln!(f, "  +---+---+---+---+---+---+---+---+")?;
+        }
+        write!(f, "    a   b   c   d   e   f   g   h")?;
+        Ok(())
+    }
+}
+
+/// Returns a nicely formatted string representation of a chessboard.
+///
+/// White pieces are uppercase (P, N, B, R, Q, K), black pieces are lowercase
+/// (p, n, b, r, q, k), and empty squares are shown as '.'.
+///
+/// # Example
+/// ```
+/// use odyn::game::chessboard::{Chessboard, format_chessboard};
+/// use odyn::constants::START_FEN;
+///
+/// let board = Chessboard::from_fen(START_FEN, " ");
+/// let display = format_chessboard(&board);
+/// assert!(display.contains('K')); // white king
+/// assert!(display.contains('p')); // black pawn
+/// ```
+pub fn format_chessboard(chessboard: &Chessboard) -> String {
+    format!("{chessboard}")
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use crate::game::chess_move;
+
     #[test]
     fn test_unpack_move() {
         let start_index = 0;
         let piece_moves = 0b1010;
-        let moves = super::Chessboard::unpack_moves(start_index, piece_moves);
+        let moves: HashSet<chess_move::Move> =
+            super::Chessboard::unpack_moves(start_index, piece_moves).collect();
         assert_eq!(moves.len(), 2);
         assert!(moves.contains(&super::Move::new_no_promotion(start_index, 1)));
         assert!(moves.contains(&super::Move::new_no_promotion(start_index, 3)));
+    }
+
+    #[test]
+    fn test_display_start_position() {
+        use crate::constants::START_FEN;
+
+        let board = super::Chessboard::from_fen(START_FEN, " ");
+        let display = format!("{board}");
+
+        // Verify rank labels are present
+        assert!(display.contains("8 "));
+        assert!(display.contains("1 "));
+
+        // Verify file labels are present
+        assert!(display.contains("a   b   c   d   e   f   g   h"));
+
+        // Verify all piece types appear
+        assert!(display.contains('R')); // white rook
+        assert!(display.contains('r')); // black rook
+        assert!(display.contains('K')); // white king
+        assert!(display.contains('k')); // black king
+        assert!(display.contains('P')); // white pawn
+        assert!(display.contains('p')); // black pawn
+
+        // Verify empty squares
+        assert!(display.contains('.'));
     }
 }

@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use smallvec::{smallvec, SmallVec};
 
 use super::{
@@ -141,12 +140,16 @@ impl Bitboard {
         "b".to_string()
     }
 
+    pub fn current_turn(&self) -> u8 {
+        self.flags >> TURN_F_INDEX
+    }
+
     fn en_passant_to_fen(&self) -> String {
         if self.en_passant == 0 {
             return "-".to_string();
         }
 
-        let current_turn: u8 = (self.flags >> 4) & 0b1;
+        let current_turn: u8 = (self.flags >> TURN_F_INDEX) & 0b1;
         let col = self.en_passant.trailing_zeros();
 
         // If current turn is white then it's black's pawn that can be taken in en passant

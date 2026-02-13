@@ -71,8 +71,12 @@ pub fn mask_row_col(board: u64, row: i32, col: i32) -> u64 {
     board & (A_FILE_MASK >> row) & (RANK_1_MASK >> col)
 }
 
-pub fn flip_vertical(board: u64) -> u64 {
-    board.swap_bits()
+pub fn mask_index(board: u64, index: u32) -> u64 {
+    board & (1 << index)
+}
+
+pub fn remove_index(board: u64, index: u32) -> u64 {
+    board & !(1 << index)
 }
 
 pub fn flip_diag_a8h1(board: u64) -> u64 {
@@ -199,12 +203,12 @@ pub fn bishop_mask(bishop_index: u32) -> u64 {
     BISHOP_LOOKUP.lookup[bishop_index as usize][hash]
 }
 
-pub fn rook_mask(rook_index: u32) -> u64 {
-    let magic = ROOK_LOOKUP.magics[rook_index as usize];
-    let hash = magic::hash_board(0, magic, 13);
-
-    ROOK_LOOKUP.lookup[rook_index as usize][hash]
-}
+// pub fn rook_mask(rook_index: u32) -> u64 {
+//     let magic = ROOK_LOOKUP.magics[rook_index as usize];
+//     let hash = magic::hash_board(0, magic, 13);
+//
+//     ROOK_LOOKUP.lookup[rook_index as usize][hash]
+// }
 
 pub fn get_indices_of_ones(board: u64) -> Vec<u32> {
     let mut indices = Vec::new();

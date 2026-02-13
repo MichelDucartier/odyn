@@ -2,6 +2,8 @@ use ilog::IntLog;
 
 use crate::constants;
 use crate::constants::A_FILE_MASK;
+use crate::constants::FILE_A_INDEX;
+use crate::constants::FILE_H_INDEX;
 use crate::constants::H_FILE_MASK;
 use crate::constants::RANK_1_INDEX;
 use crate::constants::RANK_1_MASK;
@@ -13,10 +15,10 @@ use crate::constants::RANK_8_INDEX;
 use crate::constants::RANK_8_MASK;
 use crate::game::magic;
 use crate::game::utility;
+use crate::game::utility::rook_rank_to_board;
 
 use super::bitboard;
 use super::utility::bishop_mask;
-use super::utility::rook_mask;
 
 pub fn generate_knight_moves(knight_board: u64) -> u64 {
     let l1 = (knight_board >> 1) & 0x7f7f7f7f7f7f7f7f;
@@ -60,7 +62,7 @@ pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
     generate_sliding_moves(
         rook_board,
         occupancy,
-        &|blockers, index| blockers & rook_mask(index),
+        &|blockers, index| blockers & rook_rank_to_board(0x7e, 0x7e, index),
         &magic::ROOK_LOOKUP,
     )
 }
@@ -69,7 +71,14 @@ pub fn generate_bishop_moves(bishop_board: u64, occupancy: u64) -> u64 {
     generate_sliding_moves(
         bishop_board,
         occupancy,
-        &|blockers, index| blockers & bishop_mask(index),
+        &|blockers, index| {
+            blockers
+                & bishop_mask(index)
+                & !A_FILE_MASK
+                & !H_FILE_MASK
+                & !RANK_1_MASK
+                & !RANK_8_MASK
+        },
         &magic::BISHOP_LOOKUP,
     )
 }
@@ -94,12 +103,12 @@ pub fn generate_pawn_attacks(pawn_board: u64, color: u8, en_passant: u8) -> u64 
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
         let en_passant_attacks = (en_passant as u64) << RANK_6_INDEX;
-        return (temp >> 7) | (temp >> 9) | en_passant_attacks;
+        return ((temp & !H_FILE_MASK) >> 7) | ((temp & !A_FILE_MASK) >> 9) | en_passant_attacks;
     }
 
     let temp = pawn_board & !RANK_1_MASK;
     let en_passant_attacks = (en_passant as u64) << RANK_3_INDEX;
-    (temp << 7) | temp << 9 | en_passant_attacks
+    ((temp & !H_FILE_MASK) << 7) | ((temp & !A_FILE_MASK) << 9) | en_passant_attacks
 }
 
 fn generate_sliding_moves(
@@ -116,12 +125,7 @@ fn generate_sliding_moves(
         let piece_index: u32 = remaining.log2().try_into().unwrap();
         let lookup_index: usize = piece_index.try_into().unwrap();
 
-        let relevant_blockers = blocker_generator(occupancy, piece_index)
-            & !(1 << piece_index)
-            & !A_FILE_MASK
-            & !H_FILE_MASK
-            & !RANK_1_MASK
-            & !RANK_8_MASK;
+        let relevant_blockers = blocker_generator(occupancy, piece_index) & !(1 << piece_index);
 
         let magic = magic_lookup.magics[lookup_index];
 

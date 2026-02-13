@@ -1,3 +1,5 @@
+use std::{collections::HashMap, f32::INFINITY};
+
 pub const START_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub const WHITE_ID: u8 = 1;
@@ -58,6 +60,8 @@ pub const QUIT_COMMAND: &str = "quit";
 
 pub const READY_OK: &str = "readyok";
 pub const UCI_OK: &str = "uciok";
+
+pub const PIECE_VALUES: [f32; 7] = [0.0, 1.0, 3.0, 3.0, 5.0, 9.0, INFINITY];
 
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {

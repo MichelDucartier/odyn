@@ -165,7 +165,7 @@ fn test_correct_for_black_long_castle() {
 fn test_number_of_pseudo_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
-    let legal_moves = cboard.pseudo_legal_moves(constants::WHITE_ID);
+    let legal_moves: Vec<_> = cboard.pseudo_legal_moves(constants::WHITE_ID).collect();
 
     for move_ in legal_moves.iter() {
         println!("{}", move_);
@@ -216,7 +216,7 @@ fn test_checkmate_scholar_mate() {
 fn test_number_of_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
-    let legal_moves = cboard.compute_legal_moves();
+    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
 
     for move_ in legal_moves.iter() {
         println!("{}", move_);
