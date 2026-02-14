@@ -162,6 +162,26 @@ fn test_correct_for_black_long_castle() {
 }
 
 #[test]
+fn test_castle_disallowed_when_piece_between_white_short() {
+    let cboard = chessboard::Chessboard::from_fen("4k3/8/8/8/8/8/8/4KB1R w K - 0 1", " ");
+
+    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
+    let short_castle = chess_move::Move::new_no_promotion(60, 62);
+
+    assert!(!legal_moves.contains(&short_castle));
+}
+
+#[test]
+fn test_castle_disallowed_when_piece_between_black_short() {
+    let cboard = chessboard::Chessboard::from_fen("4kn1r/8/8/8/8/8/8/4K3 b k - 0 1", " ");
+
+    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
+    let short_castle = chess_move::Move::new_no_promotion(4, 6);
+
+    assert!(!legal_moves.contains(&short_castle));
+}
+
+#[test]
 fn test_number_of_pseudo_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
