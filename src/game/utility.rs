@@ -1,8 +1,7 @@
 use std::cmp::{max, min};
 
-use super::magic::{self, BISHOP_LOOKUP, ROOK_LOOKUP};
+use super::magic::{self, BISHOP_LOOKUP};
 use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
-use bit_reverse::ParallelReverse;
 
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
     // Check if the input string has exactly 2 characters

@@ -1,7 +1,4 @@
-use std::collections::HashSet;
 use std::fmt;
-
-use ilog::IntLog;
 
 use super::{
     bitboard::Bitboard,

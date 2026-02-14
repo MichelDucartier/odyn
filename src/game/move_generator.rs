@@ -5,8 +5,6 @@ use crate::constants::A_FILE_MASK;
 use crate::constants::B_FILE_MASK;
 use crate::constants::C_FILE_MASK;
 use crate::constants::D_FILE_MASK;
-use crate::constants::FILE_A_INDEX;
-use crate::constants::FILE_H_INDEX;
 use crate::constants::F_FILE_MASK;
 use crate::constants::G_FILE_MASK;
 use crate::constants::H_FILE_MASK;

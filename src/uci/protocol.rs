@@ -1,6 +1,5 @@
 use crate::constants::{self, START_FEN, UCI_OK};
 use crate::engine::engine::ChessEngine;
-use crate::format_chessboard;
 use crate::game::chess_move::Move;
 use crate::game::utility;
 use anyhow::{anyhow, Result};
