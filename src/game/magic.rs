@@ -7,11 +7,13 @@ use crate::{
     game::utility,
 };
 
+/// Magic bitboard lookup table and associated magic multipliers per square.
 pub struct MagicLookup {
     pub lookup: Vec<Vec<u64>>,
     pub magics: Vec<u64>,
 }
 
+/// Hashes a blocker board into a compact magic-table index.
 pub fn hash_board(blockers: u64, magic: u64, remaining_bits: usize) -> usize {
     let mult = u128::from(blockers) * u128::from(magic);
     let mask = (1 << remaining_bits) - 1;

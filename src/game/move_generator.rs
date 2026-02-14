@@ -23,6 +23,7 @@ use crate::game::utility::rook_rank_to_board;
 use super::bitboard;
 use super::utility::bishop_mask;
 
+/// Generates knight attacks for every knight bit set in `knight_board`.
 pub fn generate_knight_moves(knight_board: u64) -> u64 {
     let l1 = (knight_board >> 1) & 0x7f7f7f7f7f7f7f7f;
     let l2 = (knight_board >> 2) & 0x3f3f3f3f3f3f3f3f;
@@ -33,6 +34,7 @@ pub fn generate_knight_moves(knight_board: u64) -> u64 {
     (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8)
 }
 
+/// Generates king moves for every king bit set in `king_board`.
 pub fn generate_king_moves(king_board: u64) -> u64 {
     let left_moves = utility::west_one(king_board);
     let right_moves = utility::east_one(king_board);
@@ -43,6 +45,7 @@ pub fn generate_king_moves(king_board: u64) -> u64 {
     attacks
 }
 
+/// Generates castling destinations allowed by flags and empty-path checks.
 pub fn generate_king_castle(color: u8, flags: u8, occupancy: u64) -> u64 {
     let king_castle;
     let queen_castle;
@@ -74,6 +77,7 @@ pub fn generate_king_castle(color: u8, flags: u8, occupancy: u64) -> u64 {
     u64::from(rank_castling_moves) << piece_offset
 }
 
+/// Generates rook sliding attacks for all rooks in `rook_board`.
 pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
     generate_sliding_moves(
         rook_board,
@@ -83,6 +87,7 @@ pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
     )
 }
 
+/// Generates bishop sliding attacks for all bishops in `bishop_board`.
 pub fn generate_bishop_moves(bishop_board: u64, occupancy: u64) -> u64 {
     generate_sliding_moves(
         bishop_board,
@@ -99,10 +104,12 @@ pub fn generate_bishop_moves(bishop_board: u64, occupancy: u64) -> u64 {
     )
 }
 
+/// Generates queen sliding attacks for all queens in `queen_board`.
 pub fn generate_queen_moves(queen_board: u64, occupancy: u64) -> u64 {
     generate_bishop_moves(queen_board, occupancy) | generate_rook_moves(queen_board, occupancy)
 }
 
+/// Generates forward pawn pushes (single and start-rank doubles).
 pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
@@ -115,6 +122,7 @@ pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
     (start_moves | (temp << 8)) & !occupancy
 }
 
+/// Generates pawn capture targets including en passant squares.
 pub fn generate_pawn_attacks(pawn_board: u64, color: u8, en_passant: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;

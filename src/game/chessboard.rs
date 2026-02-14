@@ -11,6 +11,7 @@ use crate::constants::{
 };
 use crate::game::bitboard;
 
+/// High-level chess board composed of bitboard and mailbox representations.
 #[derive(Default, Debug)]
 pub struct Chessboard {
     bitboard: bitboard::Bitboard,
@@ -35,6 +36,7 @@ impl Clone for Chessboard {
 }
 
 impl Chessboard {
+    /// Builds a chessboard from a FEN string.
     pub fn from_fen(fen: &str, separator: &str) -> Chessboard {
         let fen_parts: Vec<&str> = fen.split(separator).collect();
 
@@ -51,6 +53,7 @@ impl Chessboard {
         }
     }
 
+    /// Iterates over occupied squares, yielding `(index, (piece_id, color_id))`.
     pub fn get_iterator_on_pieces(&self) -> impl Iterator<Item = (u32, (u8, u8))> + '_ {
         let mut remaining = self.bitboard.white_board | self.bitboard.black_board;
 
@@ -67,6 +70,7 @@ impl Chessboard {
         })
     }
 
+    /// Serializes the board back to FEN.
     pub fn to_fen(&self, separator: &str) -> String {
         let mut bitboard_fen = self.bitboard.to_fen();
         let move_counts = format!("{} {}", self.black_moves, self.white_moves);
@@ -75,12 +79,14 @@ impl Chessboard {
         bitboard_fen.join(separator)
     }
 
+    /// Applies a move without validating legality and returns packed move flags.
     pub fn make_move_unchecked(&mut self, move_: Move) -> u16 {
         let flags = self.mailbox.move_piece(&move_);
         self.bitboard.move_piece(&move_, flags);
         flags
     }
 
+    /// Builds a board from `start_fen` after applying all `moves` in order.
     pub fn from_moves(start_fen: &str, moves: Vec<Move>) -> Chessboard {
         let mut cboard = Chessboard::from_fen(start_fen, " ");
         for move_ in moves {
@@ -89,6 +95,7 @@ impl Chessboard {
         cboard
     }
 
+    /// Computes legal moves for the side to play.
     pub fn compute_legal_moves(&self) -> impl Iterator<Item = chess_move::Move> + '_ {
         let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
         let pseudo_legal_moves = self.pseudo_legal_moves(current_color);
@@ -100,6 +107,7 @@ impl Chessboard {
         })
     }
 
+    /// Computes pseudo-legal moves for `color_id` (ignores king safety).
     pub fn pseudo_legal_moves(&self, color_id: u8) -> impl Iterator<Item = chess_move::Move> + '_ {
         let allied_board = self.bitboard.get_color_board(color_id);
 
@@ -135,24 +143,29 @@ impl Chessboard {
         })
     }
 
+    /// Returns whether `color_id` is currently in check.
     pub fn is_in_check(&self, color_id: u8) -> bool {
         self.bitboard.is_in_check(color_id)
     }
 
+    /// Returns the color id of the side to move.
     pub fn current_turn(&self) -> u8 {
         self.bitboard.current_turn()
     }
 
+    /// Returns `true` when the side to move has no legal escape from check.
     pub fn is_checkmate(&self) -> bool {
         let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
         self.is_in_check(current_color) && !self.exists_legal_moves(current_color)
     }
 
+    /// Returns `true` when the side to move has no legal move and is not in check.
     pub fn is_stalemate(&self) -> bool {
         let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
         !self.is_in_check(current_color) && self.exists_legal_moves(current_color)
     }
 
+    /// Returns whether any traversed king square is attacked during castling.
     pub fn is_castle_in_check(&self, move_: Move, color_id: u8) -> bool {
         self.bitboard.is_castle_in_check(move_, color_id)
     }

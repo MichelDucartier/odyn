@@ -8,12 +8,14 @@ use crate::{
     uci::protocol::move_to_uci,
 };
 
+/// Basic chess engine implementation using a pluggable evaluator.
 pub struct OdynEngine<E: ChessEvaluator> {
     chessboard: Chessboard,
     evaluator: E,
 }
 
 impl<E: ChessEvaluator> OdynEngine<E> {
+    /// Creates a new engine initialized with the start position.
     pub fn new(evaluator: E) -> Self {
         OdynEngine {
             chessboard: Chessboard::from_fen(START_FEN, " "),

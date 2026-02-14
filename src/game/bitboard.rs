@@ -15,6 +15,7 @@ use crate::constants::{
 };
 use std::{cmp, collections::HashMap};
 
+/// Low-level bitboard representation of piece placement and game flags.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Bitboard {
     pub white_board: u64,
@@ -31,13 +32,19 @@ pub struct Bitboard {
     pub flags: u8,
 }
 
+/// Bit index in `flags` indicating side to move.
 pub const TURN_F_INDEX: u8 = 4;
+/// Bit index in `flags` for white king-side castling rights.
 pub const WKCASTLE_F_INDEX: u8 = 3;
+/// Bit index in `flags` for white queen-side castling rights.
 pub const WQCASTLE_F_INDEX: u8 = 2;
+/// Bit index in `flags` for black king-side castling rights.
 pub const BKCASTLE_F_INDEX: u8 = 1;
+/// Bit index in `flags` for black queen-side castling rights.
 pub const BQCASTLE_F_INDEX: u8 = 0;
 
 impl Bitboard {
+    /// Builds a bitboard from a FEN string.
     pub fn from_fen(fen: &str, separator: &str) -> Bitboard {
         let fen_parts: Vec<&str> = fen.split(separator).collect();
 
@@ -63,6 +70,7 @@ impl Bitboard {
         bitboard
     }
 
+    /// Returns the piece occupancy bitboard for `key`.
     pub fn get_piece_board(&self, key: u8) -> Option<u64> {
         match key {
             PAWN_ID => Some(self.pawn_board),
@@ -76,6 +84,7 @@ impl Bitboard {
         }
     }
 
+    /// Returns the occupancy bitboard for one color.
     pub fn get_color_board(&self, key: u8) -> u64 {
         match key {
             WHITE_ID => self.white_board,
@@ -121,6 +130,7 @@ impl Bitboard {
         }
     }
 
+    /// Serializes the bitboard state into the first 4 FEN fields.
     pub fn to_fen(&self) -> SmallVec<[String; 4]> {
         let board_fen = self.board_to_fen();
         let castle_fen = self.castle_to_fen();
@@ -140,6 +150,7 @@ impl Bitboard {
         "b".to_string()
     }
 
+    /// Returns the current side to move.
     pub fn current_turn(&self) -> u8 {
         self.flags >> TURN_F_INDEX
     }
@@ -300,6 +311,7 @@ impl Bitboard {
         }
     }
 
+    /// Applies a move to the bitboards according to precomputed `flags`.
     pub fn move_piece(&mut self, move_: &Move, flags: u16) {
         let is_enpassant = chess_move::get_en_passant_flag(flags);
         let is_castle = chess_move::get_castle_flag(flags);
@@ -482,6 +494,7 @@ impl Bitboard {
         piece_moves & opponent_board
     }
 
+    /// Returns legal destinations for one piece board.
     pub fn generate_legal_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let piece_attacks = self.generate_effective_attacks(piece_id, color_id, piece_board);
         let piece_moves = self.generate_moves(piece_id, color_id, piece_board);
@@ -489,6 +502,7 @@ impl Bitboard {
         piece_moves | piece_attacks
     }
 
+    /// Returns whether `color_id` king is currently attacked.
     pub fn is_in_check(&self, color_id: u8) -> bool {
         let allied_king = self.king_board & self.get_color_board(color_id);
         self.is_attacked(color_id, allied_king)
@@ -508,6 +522,7 @@ impl Bitboard {
         false
     }
 
+    /// Returns whether castling path squares are attacked.
     pub fn is_castle_in_check(&self, move_: Move, color_id: u8) -> bool {
         let king_travel = utility::fill_between_indices(move_.start_index, move_.end_index);
         self.is_attacked(color_id, king_travel)

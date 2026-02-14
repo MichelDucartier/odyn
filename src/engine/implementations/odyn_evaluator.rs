@@ -3,6 +3,7 @@ use crate::{
     engine::evaluator::ChessEvaluator,
 };
 
+/// Material-only evaluator used by the default Odyn engine.
 pub struct OdynEvaluator;
 
 impl ChessEvaluator for OdynEvaluator {

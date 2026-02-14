@@ -5,9 +5,12 @@ use crate::game::utility;
 use anyhow::{anyhow, Result};
 use std::io::Write;
 
+/// Current position state tracked by the UCI wrapper.
 #[derive(Debug, Clone)]
 pub struct PositionState {
+    /// Base position represented as a FEN string.
     pub fen: String,
+    /// Moves applied on top of `fen`.
     pub moves: Vec<Move>,
 }
 
@@ -20,12 +23,14 @@ impl Default for PositionState {
     }
 }
 
+/// Minimal UCI command loop adapter around a [`ChessEngine`].
 pub struct UciWrapper<T: ChessEngine> {
     engine: T,
     position: PositionState,
 }
 
 impl<T: ChessEngine> UciWrapper<T> {
+    /// Creates a new wrapper with default `startpos` state.
     pub fn new(engine: T) -> Self {
         Self {
             engine,
@@ -155,6 +160,7 @@ impl<T: ChessEngine> UciWrapper<T> {
     }
 }
 
+/// Parses a UCI move string (for example `e2e4` or `e7e8q`).
 pub fn parse_uci_move(s: &str) -> Result<Move> {
     // UCI move format:
     // - e2e4
@@ -194,6 +200,7 @@ pub fn parse_uci_move(s: &str) -> Result<Move> {
     Ok(Move::new(start_index, end_index, promotion_piece))
 }
 
+/// Converts an internal move into UCI algebraic form.
 pub fn move_to_uci(mv: Move) -> String {
     let from = utility::index_to_string(mv.start_index);
     let to = utility::index_to_string(mv.end_index);

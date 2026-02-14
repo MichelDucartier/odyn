@@ -1,8 +1,12 @@
+/// Standard chess starting position in FEN.
 pub const START_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+/// Internal color id for white pieces.
 pub const WHITE_ID: u8 = 1;
+/// Internal color id for black pieces.
 pub const BLACK_ID: u8 = 0;
 
+/// Piece identifiers used throughout move generation and board state.
 pub const EMPTY_ID: u8 = 0;
 pub const PAWN_ID: u8 = 1;
 pub const KNIGHT_ID: u8 = 2;
@@ -47,9 +51,12 @@ pub const FILE_C_INDEX: u32 = 2;
 pub const FILE_B_INDEX: u32 = 1;
 pub const FILE_A_INDEX: u32 = 0;
 
+/// Piece ids iterated when checking attacks.
 pub const ALL_PIECES_ID: [u8; 6] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID, KING_ID];
+/// Valid promotion piece ids accepted by UCI move parsing.
 pub const POSSIBLE_PROMOTION: [u8; 5] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID];
 
+/// UCI protocol command keywords.
 pub const IS_READY_COMMAND: &str = "isready";
 pub const SET_OPTION_COMMAND: &str = "setoption";
 pub const DEBUG_COMMAND: &str = "debug";
@@ -62,11 +69,14 @@ pub const STOP_COMMAND: &str = "stop";
 pub const PONDERHIT_COMMAND: &str = "ponderhit";
 pub const QUIT_COMMAND: &str = "quit";
 
+/// UCI protocol acknowledgement responses.
 pub const READY_OK: &str = "readyok";
 pub const UCI_OK: &str = "uciok";
 
+/// Simplistic piece values used by the default evaluator.
 pub const PIECE_VALUES: [f32; 7] = [0.0, 1.0, 3.0, 3.0, 5.0, 9.0, f32::INFINITY];
 
+/// Returns the opposite color id.
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {
         WHITE_ID => BLACK_ID,
