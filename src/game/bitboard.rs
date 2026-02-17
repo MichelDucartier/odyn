@@ -454,7 +454,7 @@ impl Bitboard {
         self.add_piece_to_board(ROOK_ID, color_id, rook_end_index);
     }
 
-    fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+    pub fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let occupancy = self.white_board | self.black_board;
 
         match piece_id {
@@ -469,8 +469,13 @@ impl Bitboard {
         }
     }
 
-    fn generate_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
-        let occupancy = self.white_board | self.black_board;
+    pub fn generate_moves_with_occupancy(
+        &self,
+        piece_id: u8,
+        color_id: u8,
+        piece_board: u64,
+        occupancy: u64,
+    ) -> u64 {
         let moves = match piece_id {
             constants::KNIGHT_ID => generate_knight_moves(piece_board),
             constants::BISHOP_ID => generate_bishop_moves(piece_board, occupancy),
@@ -488,6 +493,11 @@ impl Bitboard {
         moves & !occupancy
     }
 
+    pub fn generate_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let occupancy = self.white_board | self.black_board;
+        self.generate_moves_with_occupancy(piece_id, color_id, piece_board, occupancy)
+    }
+
     fn generate_effective_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let piece_moves = self.generate_attacks(piece_id, color_id, piece_board);
         let opponent_board = self.get_color_board(constants::opposite(color_id));
@@ -495,7 +505,7 @@ impl Bitboard {
     }
 
     /// Returns legal destinations for one piece board.
-    pub fn generate_legal_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+    pub fn pseudo_legal_moves(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let piece_attacks = self.generate_effective_attacks(piece_id, color_id, piece_board);
         let piece_moves = self.generate_moves(piece_id, color_id, piece_board);
 
@@ -503,28 +513,33 @@ impl Bitboard {
     }
 
     /// Returns whether `color_id` king is currently attacked.
-    pub fn is_in_check(&self, color_id: u8) -> bool {
+    pub fn is_in_check(&self, color_id: u8, opponent_attacks: u64) -> bool {
         let allied_king = self.king_board & self.get_color_board(color_id);
-        self.is_attacked(color_id, allied_king)
+        self.is_attacked(allied_king, opponent_attacks)
     }
 
-    fn is_attacked(&self, color_id: u8, board: u64) -> bool {
-        let opponent_id = constants::opposite(color_id);
-        let opponent_board = self.get_color_board(opponent_id);
+    pub fn generate_pieces_attacks(&self, color_id: u8, piece_ids: Vec<u8>) -> u64 {
+        let mut all_attacks = 0;
+        let allied_board = self.get_color_board(color_id);
 
-        for piece_id in ALL_PIECES_ID {
-            let piece_board = self.get_piece_board(piece_id).unwrap() & opponent_board;
-            let piece_attacks = self.generate_attacks(piece_id, opponent_id, piece_board);
-            if board & piece_attacks != 0 {
-                return true;
-            }
+        for piece_id in piece_ids {
+            let piece_board = self.get_piece_board(piece_id).unwrap() & allied_board;
+            let piece_attacks = self.generate_attacks(piece_id, color_id, piece_board);
+
+            all_attacks |= piece_attacks;
         }
-        false
+
+        return all_attacks;
+    }
+
+    fn is_attacked(&self, board: u64, opponent_attacks: u64) -> bool {
+        // let opponent_attacks = self.generate_all_attacks(color_id);
+        board & opponent_attacks != 0
     }
 
     /// Returns whether castling path squares are attacked.
-    pub fn is_castle_in_check(&self, move_: Move, color_id: u8) -> bool {
+    pub fn is_castle_in_check(&self, move_: Move, opponent_attacks: u64) -> bool {
         let king_travel = utility::fill_between_indices(move_.start_index, move_.end_index);
-        self.is_attacked(color_id, king_travel)
+        self.is_attacked(king_travel, opponent_attacks)
     }
 }

@@ -6,6 +6,8 @@ pub mod bitboard;
 pub mod chess_move;
 /// High-level board API built on top of bitboards and mailbox storage.
 pub mod chessboard;
+/// Board movement directions represented as row/column deltas.
+pub mod direction;
 /// Precomputed magic/lookup helpers for sliding pieces.
 pub mod magic;
 /// Mailbox board representation for piece lookup by square.

@@ -35,7 +35,7 @@ impl<E: ChessEvaluator> ChessEngine for OdynEngine<E> {
         let mut max_value = -INFINITY;
         let mut best_move = None;
 
-        for current_move in self.chessboard.compute_legal_moves() {
+        for current_move in self.chessboard.legal_moves(current_color) {
             println!("Move {}", move_to_uci(current_move));
             let mut cboard = self.chessboard.clone();
             cboard.make_move_unchecked(current_move);

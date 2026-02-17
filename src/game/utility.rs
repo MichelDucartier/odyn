@@ -2,6 +2,7 @@ use std::cmp::{max, min};
 
 use super::magic::{self, BISHOP_LOOKUP};
 use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
+use crate::game::chess_move::Move;
 
 /// Converts algebraic square notation (for example `"e4"`) into `(row, col)`.
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
@@ -233,7 +234,7 @@ pub fn bishop_mask(bishop_index: u32) -> u64 {
 // }
 
 /// Returns all set-bit indices in ascending order.
-pub fn get_indices_of_ones(board: u64) -> Vec<u32> {
+pub fn bit_scan(board: u64) -> Vec<u32> {
     let mut indices = Vec::new();
     let mut board = board;
     while board != 0 {
@@ -253,4 +254,19 @@ pub fn fill_between_indices(index_1: u32, index_2: u32) -> u64 {
     let min_ones = (1_u64 << min_index) - 1;
 
     max_ones ^ min_ones
+}
+
+/// Unwraps a move bitboard into an iterator of non-promotion moves.
+pub fn unpack_moves(start_index: u32, piece_moves: u64) -> impl Iterator<Item = Move> {
+    let mut remaining_moves = piece_moves;
+
+    std::iter::from_fn(move || {
+        if remaining_moves == 0 {
+            return None;
+        }
+
+        let end_index = remaining_moves.trailing_zeros();
+        remaining_moves &= !(1_u64 << end_index);
+        Some(Move::new_no_promotion(start_index, end_index))
+    })
 }

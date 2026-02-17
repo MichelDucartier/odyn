@@ -2,12 +2,17 @@ use ilog::IntLog;
 
 use crate::constants;
 use crate::constants::A_FILE_MASK;
+use crate::constants::BISHOP_ID;
 use crate::constants::B_FILE_MASK;
 use crate::constants::C_FILE_MASK;
 use crate::constants::D_FILE_MASK;
+use crate::constants::FILE_B_INDEX;
+use crate::constants::FILE_C_INDEX;
+use crate::constants::FILE_G_INDEX;
 use crate::constants::F_FILE_MASK;
 use crate::constants::G_FILE_MASK;
 use crate::constants::H_FILE_MASK;
+use crate::constants::QUEEN_ID;
 use crate::constants::RANK_1_INDEX;
 use crate::constants::RANK_1_MASK;
 use crate::constants::RANK_2_MASK;
@@ -16,6 +21,7 @@ use crate::constants::RANK_6_INDEX;
 use crate::constants::RANK_7_MASK;
 use crate::constants::RANK_8_INDEX;
 use crate::constants::RANK_8_MASK;
+use crate::constants::ROOK_ID;
 use crate::game::magic;
 use crate::game::utility;
 use crate::game::utility::rook_rank_to_board;
@@ -66,12 +72,13 @@ pub fn generate_king_castle(color: u8, flags: u8, occupancy: u64) -> u64 {
         king_side_occupancy = king_side_occupancy & RANK_8_MASK;
         queen_side_occupancy = queen_side_occupancy & RANK_8_MASK;
     }
+
     let mut rank_castling_moves = 0;
     if king_side_occupancy == 0 {
-        rank_castling_moves |= king_castle << 6;
+        rank_castling_moves |= king_castle << FILE_G_INDEX;
     }
     if queen_side_occupancy == 0 {
-        rank_castling_moves |= queen_castle << 6;
+        rank_castling_moves |= queen_castle << FILE_C_INDEX;
     }
 
     u64::from(rank_castling_moves) << piece_offset
@@ -85,6 +92,27 @@ pub fn generate_rook_moves(rook_board: u64, occupancy: u64) -> u64 {
         &|blockers, index| blockers & rook_rank_to_board(0x7e, 0x7e, index),
         &magic::ROOK_LOOKUP,
     )
+}
+
+/// Generates x-ray rook attacks through `blockers` from one rook square.
+pub fn generate_xray_rook_attacks(occupancy: u64, blockers: u64, rook_index: u32) -> u64 {
+    let rook_board = 1u64 << rook_index;
+    let attacks = generate_rook_moves(rook_board, occupancy);
+    let blockers = blockers & attacks;
+
+    attacks ^ generate_rook_moves(rook_board, occupancy ^ blockers)
+}
+
+pub fn generate_xray_attacks(occupancy: u64, blockers: u64, piece_index: u32, piece_id: u8) -> u64 {
+    match piece_id {
+        QUEEN_ID => {
+            generate_xray_rook_attacks(occupancy, blockers, piece_index)
+                | generate_xray_bishop_attacks(occupancy, blockers, piece_index)
+        }
+        ROOK_ID => generate_xray_rook_attacks(occupancy, blockers, piece_index),
+        BISHOP_ID => generate_xray_bishop_attacks(occupancy, blockers, piece_index),
+        _ => panic!("Can't generate xray attacks for {}", piece_id),
+    }
 }
 
 /// Generates bishop sliding attacks for all bishops in `bishop_board`.
@@ -102,6 +130,15 @@ pub fn generate_bishop_moves(bishop_board: u64, occupancy: u64) -> u64 {
         },
         &magic::BISHOP_LOOKUP,
     )
+}
+
+/// Generates x-ray bishop attacks through `blockers` from one bishop square.
+pub fn generate_xray_bishop_attacks(occupancy: u64, blockers: u64, bishop_index: u32) -> u64 {
+    let bishop_board = 1u64 << bishop_index;
+    let attacks = generate_bishop_moves(bishop_board, occupancy);
+    let blockers = blockers & attacks;
+
+    attacks ^ generate_bishop_moves(bishop_board, occupancy ^ blockers)
 }
 
 /// Generates queen sliding attacks for all queens in `queen_board`.
