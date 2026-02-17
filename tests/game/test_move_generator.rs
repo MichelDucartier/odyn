@@ -31,6 +31,33 @@ fn rook_attacks_naive(rook_index: u32, occupancy: u64) -> u64 {
     attacks
 }
 
+fn bishop_attacks_naive(bishop_index: u32, occupancy: u64) -> u64 {
+    let row = (bishop_index / 8) as i32;
+    let col = (bishop_index % 8) as i32;
+    let directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+
+    let mut attacks = 0;
+
+    for (dr, dc) in directions {
+        let mut r = row + dr;
+        let mut c = col + dc;
+
+        while (0..8).contains(&r) && (0..8).contains(&c) {
+            let index = (r * 8 + c) as u32;
+            attacks |= 1u64 << index;
+
+            if (occupancy & (1u64 << index)) != 0 {
+                break;
+            }
+
+            r += dr;
+            c += dc;
+        }
+    }
+
+    attacks
+}
+
 #[test]
 fn test_king_moves() {
     let start_fen = "8/8/8/8/3K4/8/8/8 w - - 0 1";
@@ -199,6 +226,45 @@ fn test_bishop_moves_with_blocking() {
             bitboard.white_board | bitboard.black_board
         ) & !bitboard.bishop_board
     )
+}
+
+#[test]
+fn test_xray_rook_attacks() {
+    let start_fen = "8/8/3p4/8/1P1R1n2/8/3B4/8 w - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let rook_index = 35;
+    let occupancy = bitboard.white_board | bitboard.black_board;
+    let blockers = bitboard.white_board;
+
+    let attacks = rook_attacks_naive(rook_index, occupancy);
+    let blockers_in_attacks = blockers & attacks;
+    let expected_xray = attacks ^ rook_attacks_naive(rook_index, occupancy ^ blockers_in_attacks);
+
+    assert_eq_bitboard!(
+        expected_xray,
+        move_generator::generate_xray_rook_attacks(occupancy, blockers, rook_index)
+    );
+}
+
+#[test]
+fn test_xray_bishop_attacks() {
+    let start_fen = "8/8/8/4r3/3P4/2B5/1P6/k7 w - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let bishop_index = 42;
+    let occupancy = bitboard.white_board | bitboard.black_board;
+    let blockers = bitboard.white_board;
+
+    let attacks = bishop_attacks_naive(bishop_index, occupancy);
+    let blockers_in_attacks = blockers & attacks;
+    let expected_xray =
+        attacks ^ bishop_attacks_naive(bishop_index, occupancy ^ blockers_in_attacks);
+
+    assert_eq_bitboard!(
+        expected_xray,
+        move_generator::generate_xray_bishop_attacks(occupancy, blockers, bishop_index)
+    );
 }
 
 #[test]

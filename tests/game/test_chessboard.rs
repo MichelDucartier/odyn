@@ -1,5 +1,22 @@
 use odyn::constants::{self, START_FEN};
-use odyn::game::{chess_move, chessboard};
+use odyn::game::{bitboard, chess_move, chessboard};
+
+fn opponent_attacks(cboard: &chessboard::Chessboard, color_id: u8) -> u64 {
+    let fen = cboard.to_fen(" ");
+    let bboard = bitboard::Bitboard::from_fen(&fen, " ");
+    let opponent_color = constants::opposite(color_id);
+    bboard.generate_pieces_attacks(opponent_color, constants::ALL_PIECES_ID.to_vec())
+}
+
+fn is_checkmate(cboard: &chessboard::Chessboard) -> bool {
+    let current_color = cboard.current_turn();
+    let attacks = opponent_attacks(cboard, current_color);
+    let is_in_check = cboard.is_in_check(current_color, attacks);
+    let legal_moves = cboard.legal_moves(current_color);
+    println!("Is in check: {}", is_in_check);
+    println!("Legal moves: {:?}", legal_moves);
+    is_in_check && legal_moves.is_empty()
+}
 
 #[test]
 fn dummy_test() {
@@ -165,7 +182,7 @@ fn test_correct_for_black_long_castle() {
 fn test_castle_disallowed_when_piece_between_white_short() {
     let cboard = chessboard::Chessboard::from_fen("4k3/8/8/8/8/8/8/4KB1R w K - 0 1", " ");
 
-    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
     let short_castle = chess_move::Move::new_no_promotion(60, 62);
 
     assert!(!legal_moves.contains(&short_castle));
@@ -175,17 +192,57 @@ fn test_castle_disallowed_when_piece_between_white_short() {
 fn test_castle_disallowed_when_piece_between_black_short() {
     let cboard = chessboard::Chessboard::from_fen("4kn1r/8/8/8/8/8/8/4K3 b k - 0 1", " ");
 
-    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
     let short_castle = chess_move::Move::new_no_promotion(4, 6);
 
     assert!(!legal_moves.contains(&short_castle));
 }
 
 #[test]
+fn test_castle_disallowed_when_piece_between_white_long() {
+    let cboard = chessboard::Chessboard::from_fen("4k3/8/8/8/8/8/8/R1B1K3 w Q - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+    let long_castle = chess_move::Move::new_no_promotion(60, 58);
+
+    assert!(!legal_moves.contains(&long_castle));
+}
+
+#[test]
+fn test_castle_disallowed_when_piece_between_black_long() {
+    let cboard = chessboard::Chessboard::from_fen("r1b1k3/8/8/8/8/8/8/4K3 b q - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+    let long_castle = chess_move::Move::new_no_promotion(4, 2);
+
+    assert!(!legal_moves.contains(&long_castle));
+}
+
+#[test]
+fn test_castle_allowed_when_path_clear_white_long() {
+    let cboard = chessboard::Chessboard::from_fen("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+    let long_castle = chess_move::Move::new_no_promotion(60, 58);
+
+    assert!(legal_moves.contains(&long_castle));
+}
+
+#[test]
+fn test_castle_allowed_when_path_clear_black_long() {
+    let cboard = chessboard::Chessboard::from_fen("r3k3/8/8/8/8/8/8/4K3 b q - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+    let long_castle = chess_move::Move::new_no_promotion(4, 2);
+
+    assert!(legal_moves.contains(&long_castle));
+}
+
+#[test]
 fn test_number_of_pseudo_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
-    let legal_moves: Vec<_> = cboard.pseudo_legal_moves(constants::WHITE_ID).collect();
+    let legal_moves = cboard.legal_moves(constants::WHITE_ID);
 
     for move_ in legal_moves.iter() {
         println!("{}", move_);
@@ -197,7 +254,10 @@ fn test_number_of_pseudo_legal_moves_start_pos() {
 #[test]
 fn test_is_in_check_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
-    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    let is_in_check = cboard.is_in_check(
+        constants::WHITE_ID,
+        opponent_attacks(&cboard, constants::WHITE_ID),
+    );
     assert!(!is_in_check);
 }
 
@@ -207,7 +267,10 @@ fn test_is_in_check_white_in_check() {
         "rnbqk1nr/pppp1ppp/8/4p3/1b2P3/3P1N2/PPP2PPP/RNBQKB1R w KQkq - 0 1",
         " ",
     );
-    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    let is_in_check = cboard.is_in_check(
+        constants::WHITE_ID,
+        opponent_attacks(&cboard, constants::WHITE_ID),
+    );
     assert!(is_in_check);
 }
 
@@ -217,7 +280,10 @@ fn test_is_in_check_pawn_attacks() {
         "rnbqk1nr/ppp2ppp/8/4p3/1b1pP3/3PKN2/PPP2PPP/RNBQ1B1R w kq - 0 1",
         " ",
     );
-    let is_in_check = cboard.is_in_check(constants::WHITE_ID);
+    let is_in_check = cboard.is_in_check(
+        constants::WHITE_ID,
+        opponent_attacks(&cboard, constants::WHITE_ID),
+    );
     assert!(is_in_check);
 }
 
@@ -228,7 +294,7 @@ fn test_checkmate_scholar_mate() {
         " ",
     );
 
-    let is_checkmate = cboard.is_checkmate();
+    let is_checkmate = is_checkmate(&cboard);
     assert!(is_checkmate);
 }
 
@@ -236,7 +302,7 @@ fn test_checkmate_scholar_mate() {
 fn test_number_of_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 
-    let legal_moves: Vec<_> = cboard.compute_legal_moves().collect();
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
 
     for move_ in legal_moves.iter() {
         println!("{}", move_);
