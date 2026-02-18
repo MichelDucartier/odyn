@@ -14,6 +14,8 @@ pub mod magic;
 pub mod mailbox;
 /// Pseudo-legal move generation for each piece type.
 pub mod move_generator;
+/// Perft utilities for move-generation validation.
+pub mod perft;
 /// Player related helpers and types.
 pub mod player;
 /// Conversion and bit manipulation utility functions.

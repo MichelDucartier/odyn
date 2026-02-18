@@ -2,6 +2,7 @@ use crate::constants::{self, START_FEN, UCI_OK};
 use crate::engine::engine::ChessEngine;
 use crate::game::chess_move::Move;
 use crate::game::utility;
+use crate::game::{chessboard::Chessboard, perft};
 use anyhow::{anyhow, Result};
 use std::io::Write;
 
@@ -71,6 +72,13 @@ impl<T: ChessEngine> UciWrapper<T> {
                 self.handle_position(&rest)?;
             }
             constants::GO_COMMAND => {
+                let rest: Vec<&str> = it.collect();
+                if let Some(depth) = parse_go_perft_depth(&rest)? {
+                    self.run_perft(depth, out)?;
+                    out.flush()?;
+                    return Ok(false);
+                }
+
                 // For now: compute a best move synchronously.
                 // Lichess-bot is fine with a single `bestmove` line.
                 self.engine
@@ -79,7 +87,7 @@ impl<T: ChessEngine> UciWrapper<T> {
                 let requested = self.engine.current_best_move();
 
                 if let Some((mv, _val)) = requested {
-                    writeln!(out, "bestmove {}", move_to_uci(mv))?;
+                    writeln!(out, "bestmove {}", mv)?;
                 } else {
                     writeln!(out, "bestmove 0000")?;
                 }
@@ -158,6 +166,34 @@ impl<T: ChessEngine> UciWrapper<T> {
         self.position.moves = moves;
         Ok(())
     }
+
+    fn run_perft(&self, depth: u8, out: &mut dyn Write) -> Result<()> {
+        let board = Chessboard::from_moves(&self.position.fen, self.position.moves.clone());
+        // let splits = perft::perft_divide(&board, depth);
+        //
+        // for (mv, nodes) in splits {
+        //     writeln!(out, "{}: {}", mv, nodes)?;
+        // }
+
+        writeln!(out, "Nodes searched: {}", perft::perft(&board, depth))?;
+        Ok(())
+    }
+}
+
+fn parse_go_perft_depth(tokens: &[&str]) -> Result<Option<u8>> {
+    if tokens.first().copied() != Some("perft") {
+        return Ok(None);
+    }
+
+    if tokens.len() != 2 {
+        return Err(anyhow!("go perft: expected exactly one depth argument"));
+    }
+
+    let depth = tokens[1]
+        .parse::<u8>()
+        .map_err(|_| anyhow!("go perft: invalid depth '{}'", tokens[1]))?;
+
+    Ok(Some(depth))
 }
 
 /// Parses a UCI move string (for example `e2e4` or `e7e8q`).
@@ -201,17 +237,55 @@ pub fn parse_uci_move(s: &str) -> Result<Move> {
 }
 
 /// Converts an internal move into UCI algebraic form.
-pub fn move_to_uci(mv: Move) -> String {
-    let from = utility::index_to_string(mv.start_index);
-    let to = utility::index_to_string(mv.end_index);
-    let promo = match mv.promotion_piece {
-        0 => "".to_string(),
-        constants::QUEEN_ID => "q".to_string(),
-        constants::ROOK_ID => "r".to_string(),
-        constants::BISHOP_ID => "b".to_string(),
-        constants::KNIGHT_ID => "n".to_string(),
-        _ => "".to_string(),
-    };
+// pub fn move_to_uci(mv: Move) -> String {
+//     let from = utility::index_to_string(mv.start_index);
+//     let to = utility::index_to_string(mv.end_index);
+//     let promo = match mv.promotion_piece {
+//         0 => "".to_string(),
+//         constants::QUEEN_ID => "q".to_string(),
+//         constants::ROOK_ID => "r".to_string(),
+//         constants::BISHOP_ID => "b".to_string(),
+//         constants::KNIGHT_ID => "n".to_string(),
+//         _ => "".to_string(),
+//     };
+//
+//     format!("{}{}{}", from, to, promo)
+// }
+//
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    format!("{}{}{}", from, to, promo)
+    struct NoopEngine;
+
+    impl ChessEngine for NoopEngine {
+        fn position(&mut self, _fen: &str, _moves: Vec<Move>) {}
+
+        fn current_best_move(&self) -> Option<(Move, f32)> {
+            None
+        }
+    }
+
+    #[test]
+    fn test_parse_go_perft_depth() {
+        assert_eq!(parse_go_perft_depth(&["wtime", "100"]).unwrap(), None);
+        assert_eq!(parse_go_perft_depth(&["perft", "2"]).unwrap(), Some(2));
+        assert!(parse_go_perft_depth(&["perft"]).is_err());
+    }
+
+    #[test]
+    fn test_go_perft_prints_nodes_count() {
+        let mut wrapper = UciWrapper::new(NoopEngine);
+        let mut out = Vec::new();
+
+        wrapper
+            .handle_line("position startpos", &mut out)
+            .expect("position command should succeed");
+        wrapper
+            .handle_line("go perft 1", &mut out)
+            .expect("perft command should succeed");
+
+        let output = String::from_utf8(out).expect("output must be utf8");
+        assert!(output.contains("Nodes searched: 20"));
+    }
 }

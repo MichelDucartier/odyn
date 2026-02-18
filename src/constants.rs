@@ -57,7 +57,7 @@ pub const SLIDING_PIECES_ID: [u8; 3] = [BISHOP_ID, ROOK_ID, QUEEN_ID];
 pub const NON_SLIDING_PIECES_ID: [u8; 3] = [PAWN_ID, KNIGHT_ID, KING_ID];
 
 /// Valid promotion piece ids accepted by UCI move parsing.
-pub const POSSIBLE_PROMOTION: [u8; 5] = [PAWN_ID, KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID];
+pub const POSSIBLE_PROMOTION: [u8; 4] = [KNIGHT_ID, BISHOP_ID, ROOK_ID, QUEEN_ID];
 
 /// UCI protocol command keywords.
 pub const IS_READY_COMMAND: &str = "isready";

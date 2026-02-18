@@ -327,6 +327,18 @@ fn test_promotion_white_no_capture() {
 }
 
 #[test]
+fn test_promotion_white_capture_rook_removes_black_castle_rights() {
+    const FEN: &str = "4k2r/6P1/8/8/8/8/8/4K3 w k - 0 1";
+    let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
+
+    let move_ = chess_move::Move::new(14, 7, constants::QUEEN_ID);
+    cboard.make_move_unchecked(move_);
+
+    const FEN_AFTER_MOVE: &str = "4k2Q/8/8/8/8/8/8/4K3 b - - 0 1";
+    assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}
+
+#[test]
 fn test_promotion_black_capture() {
     const FEN: &str = "8/2k5/4n1P1/1n6/4K3/6N1/2p5/1B6 b - - 0 1";
     let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");

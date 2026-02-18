@@ -2,6 +2,7 @@
 name = "odyn"
 version = "0.1.0"
 edition = "2021"
+default-run = "odyn_uci"
 
 [dev-dependencies]
 criterion = "0.5.1"

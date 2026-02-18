@@ -345,7 +345,7 @@ impl Bitboard {
         self.update_en_passant_flags(piece_id, color_id, move_);
 
         // Update castle flags
-        self.update_castle_flags(piece_id, color_id, move_);
+        self.update_castle_flags(piece_id, captured_piece_id, color_id, move_);
 
         // Update turn
         self.flags ^= 1 << TURN_F_INDEX;
@@ -369,12 +369,12 @@ impl Bitboard {
         let mut mask_pawns = 0;
 
         if col != FILE_A_INDEX {
-            let left_index = utility::square_to_index(end_row, col);
+            let left_index = utility::square_to_index(end_row, col - 1);
             mask_pawns |= 1 << left_index;
         }
 
         if col != FILE_H_INDEX {
-            let right_index = utility::square_to_index(end_row, cmp::min(col + 1, FILE_H_INDEX));
+            let right_index = utility::square_to_index(end_row, col + 1);
             mask_pawns |= 1 << right_index;
         }
 
@@ -389,8 +389,14 @@ impl Bitboard {
         self.en_passant = 0;
     }
 
-    fn update_castle_flags(&mut self, piece_id: u8, color_id: u8, move_: &Move) {
-        if piece_id != KING_ID && piece_id != ROOK_ID {
+    fn update_castle_flags(
+        &mut self,
+        piece_id: u8,
+        captured_piece_id: u8,
+        color_id: u8,
+        move_: &Move,
+    ) {
+        if piece_id != KING_ID && piece_id != ROOK_ID && captured_piece_id != ROOK_ID {
             return;
         }
 
@@ -408,6 +414,18 @@ impl Bitboard {
         let (_start_row, start_col) = utility::index_to_square(move_.start_index);
 
         match (color_id, start_col) {
+            (WHITE_ID, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
+            (WHITE_ID, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
+            (BLACK_ID, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
+            (BLACK_ID, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
+            _ => (),
+        }
+
+        // Update flags if ennemy rook is taken
+        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+        let opponent_id = constants::opposite(color_id);
+
+        match (opponent_id, end_col) {
             (WHITE_ID, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
             (WHITE_ID, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
             (BLACK_ID, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),

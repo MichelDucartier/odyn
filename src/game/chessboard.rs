@@ -13,16 +13,16 @@ use super::{
 };
 use crate::{
     constants::{
-        self, ALL_PIECES_ID, BISHOP_ID, EMPTY_ID, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, ROOK_ID,
-        WHITE_ID,
+        self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, KING_ID, KNIGHT_ID, PAWN_ID,
+        POSSIBLE_PROMOTION, QUEEN_ID, RANK_1_INDEX, ROOK_ID, WHITE_ID,
     },
     game::move_generator::{
-        generate_bishop_moves, generate_rook_moves, generate_xray_attacks,
-        generate_xray_bishop_attacks, generate_xray_rook_attacks,
+        generate_bishop_moves, generate_rook_moves, generate_xray_bishop_attacks,
+        generate_xray_rook_attacks,
     },
 };
 use crate::{
-    constants::{NON_SLIDING_PIECES_ID, SLIDING_PIECES_ID},
+    constants::{NON_SLIDING_PIECES_ID, RANK_8_INDEX},
     game::bitboard,
 };
 
@@ -83,6 +83,11 @@ impl Chessboard {
             let piece = self.mailbox.get_piece(idx);
             Some((idx, piece))
         })
+    }
+
+    /// Returns the piece id and color id on a square.
+    pub fn piece_at(&self, index: u32) -> (u8, u8) {
+        self.mailbox.get_piece(index)
     }
 
     /// Serializes the board back to FEN.
@@ -175,6 +180,7 @@ impl Chessboard {
                 }
 
                 utility::unpack_moves(*start_idx, piece_attacks)
+                    .flat_map(move |move_| self.maybe_promotion_moves(move_, piece_id, color_id))
             })
             .collect();
 
@@ -188,6 +194,10 @@ impl Chessboard {
                     self.bitboard
                         .generate_moves(piece_id, color_id, 1_u64 << start_index);
 
+                if piece_id == KING_ID {
+                    allowed_moves = allowed_moves & !ennemy_attacks;
+                }
+
                 // 2 choices: pinned or not pinned
                 if let Some(allow_mask) = pinned_pieces.get(start_index) {
                     // If pinned
@@ -195,6 +205,7 @@ impl Chessboard {
                 }
 
                 utility::unpack_moves(*start_index, allowed_moves)
+                    .flat_map(move |move_| self.maybe_promotion_moves(move_, piece_id, color_id))
             })
             .collect();
 
@@ -215,8 +226,33 @@ impl Chessboard {
         allowed_moves.extend(allied_attacks);
 
         println!("Allowed moves: {:?}", allowed_moves);
-
         allowed_moves
+    }
+
+    fn maybe_promotion_moves(&self, move_: Move, piece_id: u8, color_id: u8) -> HashSet<Move> {
+        if piece_id != PAWN_ID {
+            return HashSet::from([move_]);
+        }
+
+        let (end_row, _end_col) = utility::index_to_square(move_.end_index);
+
+        // It's a pawn, check if it's a promotion move
+        if (end_row == RANK_8_INDEX && color_id == WHITE_ID)
+            || (end_row == RANK_1_INDEX && color_id == BLACK_ID)
+        {
+            let mut possible_moves = HashSet::new();
+            for promotion_piece in POSSIBLE_PROMOTION {
+                possible_moves.insert(Move::new(
+                    move_.start_index,
+                    move_.end_index,
+                    promotion_piece,
+                ));
+            }
+
+            return possible_moves;
+        }
+
+        HashSet::from([move_])
     }
 
     fn handle_single_check(

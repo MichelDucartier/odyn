@@ -1,6 +1,7 @@
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
+use crate::constants;
 use crate::game::utility;
 
 /// Chess move represented as start/end square indices plus optional promotion.
@@ -16,10 +17,7 @@ pub struct Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let start_string = utility::index_to_string(self.start_index);
-        let end_string = utility::index_to_string(self.end_index);
-
-        write!(f, "Move {} -> {}", start_string, end_string)
+        write!(f, "{}", self.uci_move())
     }
 }
 
@@ -40,6 +38,22 @@ impl Move {
             end_index,
             promotion_piece: 0,
         }
+    }
+
+    /// Returns move in UCI format (for example `e2e4` or `e7e8q`).
+    pub fn uci_move(&self) -> String {
+        let from = utility::index_to_string(self.start_index);
+        let to = utility::index_to_string(self.end_index);
+        let promo = match self.promotion_piece {
+            0 => "",
+            constants::QUEEN_ID => "q",
+            constants::ROOK_ID => "r",
+            constants::BISHOP_ID => "b",
+            constants::KNIGHT_ID => "n",
+            _ => "",
+        };
+
+        format!("{}{}{}", from, to, promo)
     }
 }
 

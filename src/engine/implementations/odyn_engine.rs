@@ -5,7 +5,6 @@ use crate::{
     engine::{engine::ChessEngine, evaluator::ChessEvaluator},
     format_chessboard,
     game::{chess_move, chessboard::Chessboard},
-    uci::protocol::move_to_uci,
 };
 
 /// Basic chess engine implementation using a pluggable evaluator.
@@ -36,7 +35,7 @@ impl<E: ChessEvaluator> ChessEngine for OdynEngine<E> {
         let mut best_move = None;
 
         for current_move in self.chessboard.legal_moves(current_color) {
-            println!("Move {}", move_to_uci(current_move));
+            println!("Move {}", current_move);
             let mut cboard = self.chessboard.clone();
             cboard.make_move_unchecked(current_move);
             let value = self.evaluator.evaluate(&cboard, current_color);
