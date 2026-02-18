@@ -153,9 +153,15 @@ impl Chessboard {
             occupancy,
         );
 
+        // println!(
+        //     "Ennemy attacks\n{}",
+        //     utility::format_bitboard(ennemy_attacks)
+        // );
+
+        // println!("Pinned pieces\n{:?}", pinned_pieces);
+
         // King moves (keep only the moves that are not blocked by allied pieces + not attacked by
         // ennemies)
-        // TODO: Handle sliding pieces attack + king moves into the ray
         let king_moves = generate_king_moves(allied_king_board) & !allied_board & !ennemy_attacks;
 
         if checkers.len() >= 2 {
@@ -167,15 +173,24 @@ impl Chessboard {
             .iter()
             .flat_map(|start_idx| {
                 let (piece_id, color_id) = self.mailbox.get_piece(*start_idx);
-                let mut piece_attacks =
-                    self.bitboard
-                        .generate_attacks(piece_id, color_id, 1_u64 << *start_idx)
-                        & opponent_board;
+                let mut piece_attacks = self.bitboard.generate_effective_attacks(
+                    piece_id,
+                    color_id,
+                    1_u64 << *start_idx,
+                );
+                // self.bitboard
+                //     .generate_attacks(piece_id, color_id, 1_u64 << *start_idx)
+                //     & opponent_board;
 
                 // If the attacker is a king, need to check whether the potential captured piece
                 // will cause the king to be in check
                 if piece_id == KING_ID {
                     piece_attacks = piece_attacks & !ennemy_attacks;
+                }
+
+                if let Some(allow_mask) = pinned_pieces.get(start_idx) {
+                    // If pinned
+                    piece_attacks &= allow_mask;
                 }
 
                 utility::unpack_moves(*start_idx, piece_attacks)
@@ -199,7 +214,6 @@ impl Chessboard {
 
                 // 2 choices: pinned or not pinned
                 if let Some(allow_mask) = pinned_pieces.get(start_index) {
-                    // If pinned
                     allowed_moves = allowed_moves & allow_mask;
                 }
 
@@ -356,29 +370,16 @@ impl Chessboard {
         let start_rook_rays = generate_rook_moves(start_board, occupancy);
         if (start_rook_rays & end_board) != 0 {
             let end_rook_rays = generate_rook_moves(end_board, occupancy);
-            return start_rook_rays & end_rook_rays;
+            return (start_rook_rays & end_rook_rays) | (1_u64 << end_index);
         }
 
         let start_bishop_rays = generate_bishop_moves(start_board, occupancy);
         if (start_bishop_rays & end_board) != 0 {
             let end_bishop_rays = generate_bishop_moves(end_board, occupancy);
-            return start_bishop_rays & end_bishop_rays;
+            return start_bishop_rays & end_bishop_rays | (1_u64 << end_index);
         }
 
         0
-    }
-
-    fn unpack_moves(start_index: u32, piece_moves: u64) -> impl Iterator<Item = chess_move::Move> {
-        let mut remaining_moves = piece_moves;
-
-        std::iter::from_fn(move || {
-            if remaining_moves == 0 {
-                return None;
-            }
-            let end_index = remaining_moves.trailing_zeros();
-            remaining_moves &= !(1_u64 << end_index);
-            Some(Move::new_no_promotion(start_index, end_index))
-        })
     }
 
     /// Returns whether `color_id` is currently in check.
@@ -493,20 +494,6 @@ pub fn format_chessboard(chessboard: &Chessboard) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
-    use crate::game::chess_move;
-
-    #[test]
-    fn test_unpack_move() {
-        let start_index = 0;
-        let piece_moves = 0b1010;
-        let moves: HashSet<chess_move::Move> =
-            super::Chessboard::unpack_moves(start_index, piece_moves).collect();
-        assert_eq!(moves.len(), 2);
-        assert!(moves.contains(&super::Move::new_no_promotion(start_index, 1)));
-        assert!(moves.contains(&super::Move::new_no_promotion(start_index, 3)));
-    }
 
     #[test]
     fn test_display_start_position() {

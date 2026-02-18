@@ -353,7 +353,6 @@ impl Bitboard {
 
     fn promotion_move(&mut self, move_: &Move, color_id: u8) {
         self.remove_piece_from_board(PAWN_ID, color_id, move_.start_index);
-        println!("Promotion move with {}", move_.promotion_piece);
         self.add_piece_to_board(move_.promotion_piece, color_id, move_.end_index);
     }
 
@@ -486,7 +485,7 @@ impl Bitboard {
             constants::ROOK_ID => generate_rook_moves(piece_board, occupancy),
             constants::QUEEN_ID => generate_queen_moves(piece_board, occupancy),
             constants::KING_ID => generate_king_moves(piece_board),
-            constants::PAWN_ID => generate_pawn_attacks(piece_board, color_id, self.en_passant),
+            constants::PAWN_ID => generate_pawn_attacks(piece_board, color_id),
             constants::EMPTY_ID => 0,
             _ => panic!("Invalid piece id : {piece_id}"),
         }
@@ -526,10 +525,24 @@ impl Bitboard {
         self.generate_moves_with_occupancy(piece_id, color_id, piece_board, occupancy)
     }
 
-    fn generate_effective_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+    pub fn generate_effective_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
         let piece_moves = self.generate_attacks(piece_id, color_id, piece_board);
         let opponent_board = self.get_color_board(constants::opposite(color_id));
-        piece_moves & opponent_board
+
+        match piece_id {
+            PAWN_ID => {
+                let en_passant_board = if self.en_passant == 0 {
+                    0
+                } else if color_id == WHITE_ID {
+                    (self.en_passant as u64) << (RANK_6_INDEX * 8)
+                } else {
+                    (self.en_passant as u64) << (RANK_3_INDEX * 8)
+                };
+
+                piece_moves & (opponent_board | en_passant_board)
+            }
+            _ => piece_moves & opponent_board,
+        }
     }
 
     /// Returns legal destinations for one piece board.

@@ -197,6 +197,33 @@ fn test_black_rook_moves_in_a8_corner_with_occupancy() {
 }
 
 #[test]
+fn test_white_rook_moves_in_h1_corner_no_occupancy() {
+    let start_fen = "8/8/8/8/8/8/8/7R w - - 0 1";
+    let bitboard = Bitboard::from_fen(start_fen, " ");
+
+    let rook_board = bitboard.rook_board & bitboard.white_board;
+    let expected_moves = (1u64 << 7)
+        | (1u64 << 15)
+        | (1u64 << 23)
+        | (1u64 << 31)
+        | (1u64 << 39)
+        | (1u64 << 47)
+        | (1u64 << 55)
+        | (1u64 << 56)
+        | (1u64 << 57)
+        | (1u64 << 58)
+        | (1u64 << 59)
+        | (1u64 << 60)
+        | (1u64 << 61)
+        | (1u64 << 62);
+    let generated_moves = move_generator::generate_rook_moves(rook_board, 0) & !rook_board;
+
+    assert_eq_bitboard!(expected_moves, generated_moves);
+
+    assert_eq_bitboard!(rook_attacks_naive(63, 0), generated_moves);
+}
+
+#[test]
 fn test_bishop_moves_single_bishop() {
     let start_fen = "8/8/8/8/8/2B5/8/8 w - - 0 1";
     let bitboard = Bitboard::from_fen(start_fen, " ");

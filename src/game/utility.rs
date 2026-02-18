@@ -3,6 +3,7 @@ use std::cmp::{max, min};
 use super::magic::{self, BISHOP_LOOKUP};
 use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
 use crate::game::chess_move::Move;
+use crate::game::magic::ROOK_LOOKUP;
 
 /// Converts algebraic square notation (for example `"e4"`) into `(row, col)`.
 pub fn string_to_square(s: &str) -> Option<(u32, u32)> {
@@ -173,20 +174,24 @@ pub fn relevant_rook_blocking(board: u64, rook_index: u32) -> u64 {
         & !RANK_8_MASK
 }
 
-/// Formats a bitboard as an 8x8 grid of `0` and `1`.
+/// Formats a bitboard as an 8x8 grid with file/rank coordinates.
 pub fn format_bitboard(bitboard: u64) -> String {
-    let mut s = "".to_owned();
+    let mut s = String::from("    a b c d e f g h\n");
 
-    for i in 0..64 {
-        let bit = extract_bit(bitboard, i);
+    for row in 0..8 {
+        let rank = 8 - row;
+        s.push_str(&format!("{} |", rank));
 
-        if (i % 8) == 0 && i != 0 {
-            s.push('\n');
+        for col in 0..8 {
+            let index = square_to_index(row, col) as u8;
+            let bit = extract_bit(bitboard, index);
+            s.push_str(&format!(" {}", bit));
         }
 
-        s.push_str(&bit.to_string());
+        s.push_str(" |\n");
     }
 
+    s.push_str("    a b c d e f g h");
     s
 }
 
@@ -226,12 +231,12 @@ pub fn bishop_mask(bishop_index: u32) -> u64 {
     BISHOP_LOOKUP.lookup[bishop_index as usize][hash]
 }
 
-// pub fn rook_mask(rook_index: u32) -> u64 {
-//     let magic = ROOK_LOOKUP.magics[rook_index as usize];
-//     let hash = magic::hash_board(0, magic, 13);
-//
-//     ROOK_LOOKUP.lookup[rook_index as usize][hash]
-// }
+pub fn rook_mask(rook_index: u32) -> u64 {
+    let magic = ROOK_LOOKUP.magics[rook_index as usize];
+    let hash = magic::hash_board(0, magic, 13);
+
+    ROOK_LOOKUP.lookup[rook_index as usize][hash]
+}
 
 /// Returns all set-bit indices in ascending order.
 pub fn bit_scan(board: u64) -> Vec<u32> {

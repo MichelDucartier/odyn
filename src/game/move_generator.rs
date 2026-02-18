@@ -143,33 +143,37 @@ pub fn generate_xray_bishop_attacks(occupancy: u64, blockers: u64, bishop_index:
 
 /// Generates queen sliding attacks for all queens in `queen_board`.
 pub fn generate_queen_moves(queen_board: u64, occupancy: u64) -> u64 {
-    generate_bishop_moves(queen_board, occupancy) | generate_rook_moves(queen_board, occupancy)
+    let rook_moves = generate_rook_moves(queen_board, occupancy);
+    generate_bishop_moves(queen_board, occupancy) | rook_moves
 }
 
 /// Generates forward pawn pushes (single and start-rank doubles).
 pub fn generate_pawn_moves(pawn_board: u64, occupancy: u64, color: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
-        let start_moves = (pawn_board & RANK_2_MASK) >> 16;
+
+        let start_moves = ((pawn_board & RANK_2_MASK) >> 16) & !(occupancy >> 8);
         return (start_moves | (temp >> 8)) & !occupancy;
     }
 
     let temp = pawn_board & !RANK_1_MASK;
-    let start_moves = (pawn_board & RANK_7_MASK) << 16;
+    let start_moves = ((pawn_board & RANK_7_MASK) << 16) & !(occupancy << 8);
     (start_moves | (temp << 8)) & !occupancy
 }
 
 /// Generates pawn capture targets including en passant squares.
-pub fn generate_pawn_attacks(pawn_board: u64, color: u8, en_passant: u8) -> u64 {
+pub fn generate_pawn_attacks(pawn_board: u64, color: u8) -> u64 {
     if color == constants::WHITE_ID {
         let temp = pawn_board & !RANK_8_MASK;
-        let en_passant_attacks = (en_passant as u64) << RANK_6_INDEX;
-        return ((temp & !H_FILE_MASK) >> 7) | ((temp & !A_FILE_MASK) >> 9) | en_passant_attacks;
+        let diagonal_attacks = ((temp & !H_FILE_MASK) >> 7) | ((temp & !A_FILE_MASK) >> 9);
+        // let en_passant_attacks = ((en_passant as u64) << (RANK_6_INDEX * 8);
+        return diagonal_attacks;
     }
 
     let temp = pawn_board & !RANK_1_MASK;
-    let en_passant_attacks = (en_passant as u64) << RANK_3_INDEX;
-    ((temp & !H_FILE_MASK) << 7) | ((temp & !A_FILE_MASK) << 9) | en_passant_attacks
+    let diagonal_attacks = ((temp & !A_FILE_MASK) << 7) | ((temp & !H_FILE_MASK) << 9);
+    // let en_passant_attacks = (en_passant as u64) << (RANK_3_INDEX * 8);
+    diagonal_attacks
 }
 
 fn generate_sliding_moves(
@@ -187,11 +191,11 @@ fn generate_sliding_moves(
         let lookup_index: usize = piece_index.try_into().unwrap();
 
         let relevant_blockers = blocker_generator(occupancy, piece_index) & !(1 << piece_index);
-
         let magic = magic_lookup.magics[lookup_index];
 
         let hash: usize = magic::hash_board(relevant_blockers, magic, 13);
-        attacks |= magic_lookup.lookup[lookup_index][hash];
+        // The piece in itself is not attacking its own square
+        attacks |= magic_lookup.lookup[lookup_index][hash] & !(1_u64 << piece_index);
 
         remaining &= !(1 << piece_index);
     }

@@ -41,7 +41,7 @@ const fn rook_rank_attack(rook_index: u32, occupancy: u8) -> u8 {
 const fn generate_rank_lookup() -> [[u8; 64]; 8] {
     let mut lookup_table = [[0; 64]; 8];
 
-    const_for!(rook_index in 0..7 => {
+    const_for!(rook_index in 0..8 => {
         const_for!(occupancy in 0..64 => {
             let relevant_occupancy: u8 = (occupancy << 1) & 0x7e;
 
