@@ -17,8 +17,8 @@ use crate::{
         POSSIBLE_PROMOTION, QUEEN_ID, RANK_1_INDEX, ROOK_ID, WHITE_ID,
     },
     game::move_generator::{
-        generate_bishop_moves, generate_rook_moves, generate_xray_bishop_attacks,
-        generate_xray_rook_attacks,
+        generate_bishop_moves, generate_king_moves, generate_rook_moves,
+        generate_xray_bishop_attacks, generate_xray_rook_attacks,
     },
 };
 use crate::{
@@ -141,23 +141,22 @@ impl Chessboard {
             })
             .collect::<HashMap<u32, u64>>();
 
-        println!("Number of checkers: {}", checkers.len());
-
         // Compute pinned pieces
         let pinned_pieces = self.compute_pinned_pieces(color_id);
 
         // Compute ennemy attacks
-        let ennemy_attacks = self
-            .bitboard
-            .generate_pieces_attacks(opponent_color, ALL_PIECES_ID.to_vec());
+        let occupancy =
+            (self.bitboard.white_board | self.bitboard.black_board) & !allied_king_board;
+        let ennemy_attacks = self.bitboard.generate_pieces_attacks_with_occupancy(
+            opponent_color,
+            ALL_PIECES_ID.to_vec(),
+            occupancy,
+        );
 
         // King moves (keep only the moves that are not blocked by allied pieces + not attacked by
         // ennemies)
-        let king_moves = self
-            .bitboard
-            .generate_moves(KING_ID, color_id, allied_king_board)
-            & !allied_board
-            & !ennemy_attacks;
+        // TODO: Handle sliding pieces attack + king moves into the ray
+        let king_moves = generate_king_moves(allied_king_board) & !allied_board & !ennemy_attacks;
 
         if checkers.len() >= 2 {
             // Double check, the only move is a king move
@@ -225,7 +224,6 @@ impl Chessboard {
         let mut allowed_moves = allied_moves;
         allowed_moves.extend(allied_attacks);
 
-        println!("Allowed moves: {:?}", allowed_moves);
         allowed_moves
     }
 
@@ -271,8 +269,6 @@ impl Chessboard {
             .filter(|move_| move_.end_index == checker_idx)
             .copied()
             .collect();
-
-        println!("Capture moves: {:?}", capture_moves);
 
         // King moves
         let king_moves_set: HashSet<chess_move::Move> =

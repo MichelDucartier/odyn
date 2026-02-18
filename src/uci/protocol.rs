@@ -169,11 +169,15 @@ impl<T: ChessEngine> UciWrapper<T> {
 
     fn run_perft(&self, depth: u8, out: &mut dyn Write) -> Result<()> {
         let board = Chessboard::from_moves(&self.position.fen, self.position.moves.clone());
-        // let splits = perft::perft_divide(&board, depth);
-        //
-        // for (mv, nodes) in splits {
-        //     writeln!(out, "{}: {}", mv, nodes)?;
-        // }
+        let splits = perft::perft_divide(&board, depth);
+
+        for (mv, nodes) in splits {
+            writeln!(out, "{}: {}", mv.uci_move(), nodes)?;
+        }
+
+        if depth > 0 {
+            writeln!(out)?;
+        }
 
         writeln!(out, "Nodes searched: {}", perft::perft(&board, depth))?;
         Ok(())
@@ -286,6 +290,25 @@ mod tests {
             .expect("perft command should succeed");
 
         let output = String::from_utf8(out).expect("output must be utf8");
+        assert!(output.contains("Nodes searched: 20"));
+    }
+
+    #[test]
+    fn test_go_perft_prints_divide_lines() {
+        let mut wrapper = UciWrapper::new(NoopEngine);
+        let mut out = Vec::new();
+
+        wrapper
+            .handle_line("position startpos", &mut out)
+            .expect("position command should succeed");
+        wrapper
+            .handle_line("go perft 1", &mut out)
+            .expect("perft command should succeed");
+
+        let output = String::from_utf8(out).expect("output must be utf8");
+        assert!(output.contains("a2a3: 1"));
+        assert!(output.contains("h2h4: 1"));
+        assert!(output.contains("g1f3: 1"));
         assert!(output.contains("Nodes searched: 20"));
     }
 }

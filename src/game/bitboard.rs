@@ -353,6 +353,7 @@ impl Bitboard {
 
     fn promotion_move(&mut self, move_: &Move, color_id: u8) {
         self.remove_piece_from_board(PAWN_ID, color_id, move_.start_index);
+        println!("Promotion move with {}", move_.promotion_piece);
         self.add_piece_to_board(move_.promotion_piece, color_id, move_.end_index);
     }
 
@@ -472,9 +473,13 @@ impl Bitboard {
         self.add_piece_to_board(ROOK_ID, color_id, rook_end_index);
     }
 
-    pub fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
-        let occupancy = self.white_board | self.black_board;
-
+    pub fn generate_attacks_with_occupancy(
+        &self,
+        piece_id: u8,
+        color_id: u8,
+        piece_board: u64,
+        occupancy: u64,
+    ) -> u64 {
         match piece_id {
             constants::KNIGHT_ID => generate_knight_moves(piece_board),
             constants::BISHOP_ID => generate_bishop_moves(piece_board, occupancy),
@@ -485,6 +490,11 @@ impl Bitboard {
             constants::EMPTY_ID => 0,
             _ => panic!("Invalid piece id : {piece_id}"),
         }
+    }
+
+    pub fn generate_attacks(&self, piece_id: u8, color_id: u8, piece_board: u64) -> u64 {
+        let occupancy = self.white_board | self.black_board;
+        self.generate_attacks_with_occupancy(piece_id, color_id, piece_board, occupancy)
     }
 
     pub fn generate_moves_with_occupancy(
@@ -537,12 +547,23 @@ impl Bitboard {
     }
 
     pub fn generate_pieces_attacks(&self, color_id: u8, piece_ids: Vec<u8>) -> u64 {
+        let occupancy = self.white_board | self.black_board;
+        self.generate_pieces_attacks_with_occupancy(color_id, piece_ids, occupancy)
+    }
+
+    pub fn generate_pieces_attacks_with_occupancy(
+        &self,
+        color_id: u8,
+        piece_ids: Vec<u8>,
+        occupancy: u64,
+    ) -> u64 {
         let mut all_attacks = 0;
         let allied_board = self.get_color_board(color_id);
 
         for piece_id in piece_ids {
             let piece_board = self.get_piece_board(piece_id).unwrap() & allied_board;
-            let piece_attacks = self.generate_attacks(piece_id, color_id, piece_board);
+            let piece_attacks =
+                self.generate_attacks_with_occupancy(piece_id, color_id, piece_board, occupancy);
 
             all_attacks |= piece_attacks;
         }

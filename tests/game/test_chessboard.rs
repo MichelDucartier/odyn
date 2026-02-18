@@ -349,3 +349,15 @@ fn test_promotion_black_capture() {
     const FEN_AFTER_MOVE: &str = "8/2k5/4n1P1/1n6/4K3/6N1/8/1n6 w - - 0 1";
     assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
 }
+
+#[test]
+fn test_promotion_from_provided_fen_a7a8q() {
+    const FEN: &str = "8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1";
+    let mut cboard = chessboard::Chessboard::from_fen(FEN, " ");
+
+    let move_ = chess_move::Move::new(8, 0, constants::QUEEN_ID);
+    cboard.make_move_unchecked(move_);
+
+    const FEN_AFTER_MOVE: &str = "Q7/1PPk4/8/8/8/8/4Kppp/8 b - - 0 1";
+    assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}

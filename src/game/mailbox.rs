@@ -131,6 +131,8 @@ impl MailboxBoard {
             self.board[move_.start_index as usize] = EMPTY_ID;
 
             flags |= 1 << chess_move::PROMOTION_INDEX; // set promotion flag
+
+            return flags;
         }
 
         self.board[move_.end_index as usize] = self.board[move_.start_index as usize];
