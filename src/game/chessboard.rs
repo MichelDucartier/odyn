@@ -338,13 +338,10 @@ impl Chessboard {
         let bishop_pinners = generate_xray_bishop_attacks(occupancy, allied_board, king_index)
             & opponent_bishop_like;
 
-        let mut pinners = rook_pinners | bishop_pinners;
+        let pinners = rook_pinners | bishop_pinners;
         let mut pinned_pieces = HashMap::new();
 
-        while pinners != 0 {
-            let pinner_index = pinners.trailing_zeros();
-            pinners &= pinners - 1;
-
+        for pinner_index in utility::iter_bits(pinners) {
             let allowed_ray_mask = Self::build_ray_mask(king_index, pinner_index);
             // let occupied_on_ray = occupancy & allowed_ray_mask;
             let pinned_piece_board = allowed_ray_mask & allied_board & !allied_king_board;
