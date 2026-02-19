@@ -1,6 +1,15 @@
 use odyn::constants::{self, START_FEN};
 use odyn::game::{bitboard, chess_move, chessboard};
 
+fn idx(square: &str) -> u32 {
+    let (row, col) = odyn::game::utility::string_to_square(square).unwrap();
+    odyn::game::utility::square_to_index(row, col)
+}
+
+fn mv(from: &str, to: &str) -> chess_move::Move {
+    chess_move::Move::new_no_promotion(idx(from), idx(to))
+}
+
 fn opponent_attacks(cboard: &chessboard::Chessboard, color_id: u8) -> u64 {
     let fen = cboard.to_fen(" ");
     let bboard = bitboard::Bitboard::from_fen(&fen, " ");
@@ -370,4 +379,76 @@ fn test_promotion_from_provided_fen_a7a8q() {
 
     const FEN_AFTER_MOVE: &str = "Q7/1PPk4/8/8/8/8/4Kppp/8 b - - 0 1";
     assert_eq!(FEN_AFTER_MOVE, cboard.to_fen(" "));
+}
+
+#[test]
+fn test_castle_disallowed_while_in_check() {
+    let cboard = chessboard::Chessboard::from_fen("k3r3/8/8/8/8/8/8/R3K2R w KQ - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    assert!(!legal_moves.contains(&mv("e1", "g1")));
+    assert!(!legal_moves.contains(&mv("e1", "c1")));
+}
+
+#[test]
+fn test_castle_disallowed_through_attacked_square() {
+    let cboard = chessboard::Chessboard::from_fen("k7/8/8/8/2b5/8/8/4K2R w K - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    // Bishop on c4 attacks f1, so white cannot castle king-side through f1.
+    assert!(!legal_moves.contains(&mv("e1", "g1")));
+}
+
+#[test]
+fn test_double_check_only_king_moves_allowed() {
+    let cboard = chessboard::Chessboard::from_fen("k3r3/8/8/8/1b6/8/8/4K2R w - - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    assert!(!legal_moves.is_empty());
+    assert!(legal_moves.iter().all(|m| m.start_index == idx("e1")));
+}
+
+#[test]
+fn test_pinned_knight_cannot_move() {
+    let cboard = chessboard::Chessboard::from_fen("k3r3/8/8/8/8/8/4N3/4K3 w - - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    assert!(legal_moves.iter().all(|m| m.start_index != idx("e2")));
+}
+
+#[test]
+fn test_en_passant_disallowed_if_it_exposes_own_king() {
+    let cboard = chessboard::Chessboard::from_fen("k3r3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    // e5xd6 en-passant would open the e-file and expose check from the rook on e8.
+    assert!(!legal_moves.contains(&mv("e5", "d6")));
+}
+
+#[test]
+fn test_stalemate_has_no_legal_moves_and_not_in_check() {
+    let cboard = chessboard::Chessboard::from_fen("7k/5K2/6Q1/8/8/8/8/8 b - - 0 1", " ");
+
+    let current_color = cboard.current_turn();
+    let legal_moves = cboard.legal_moves(current_color);
+    let attacks = opponent_attacks(&cboard, current_color);
+
+    assert!(legal_moves.is_empty());
+    assert!(!cboard.is_in_check(current_color, attacks));
+}
+
+#[test]
+fn test_en_passant_disallowed_for_horizontally_pinned_pawn() {
+    let cboard = chessboard::Chessboard::from_fen("k7/8/8/r4pPK/8/8/8/8 w - f6 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+
+    // g5xf6 en-passant removes both blockers on the 5th rank (g5 and f5),
+    // exposing the king on h5 to the rook on a5.
+    assert!(!legal_moves.contains(&mv("g5", "f6")));
 }

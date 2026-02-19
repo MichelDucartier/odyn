@@ -189,6 +189,12 @@ impl Chessboard {
             }
 
             for move_ in utility::unpack_moves(start_index, piece_attacks) {
+                if self.is_en_passant_move(move_, piece_id)
+                    && !self.is_legal_en_passant(move_, piece_color_id)
+                {
+                    continue;
+                }
+
                 self.append_promotion_moves(&mut allied_attacks, move_, piece_id, piece_color_id);
             }
 
@@ -263,6 +269,28 @@ impl Chessboard {
         }
 
         move_list.push(move_);
+    }
+
+    fn is_en_passant_move(&self, move_: Move, piece_id: u8) -> bool {
+        if piece_id != PAWN_ID {
+            return false;
+        }
+
+        let (_start_row, start_col) = utility::index_to_square(move_.start_index);
+        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+        start_col.abs_diff(end_col) == 1 && self.mailbox.get_piece(move_.end_index).0 == EMPTY_ID
+    }
+
+    fn is_legal_en_passant(&self, move_: Move, color_id: u8) -> bool {
+        let mut next = self.clone();
+        next.make_move_unchecked(move_);
+
+        let opponent_color = constants::opposite(color_id);
+        let opponent_attacks = next
+            .bitboard
+            .generate_pieces_attacks(opponent_color, &ALL_PIECES_ID);
+
+        !next.is_in_check(color_id, opponent_attacks)
     }
 
     fn handle_single_check(
