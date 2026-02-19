@@ -130,11 +130,7 @@ impl Chessboard {
 
         // Compute checkers with their indices + attacks
         let mut checkers = Vec::new();
-        let mut remaining_opponent = opponent_board;
-        while remaining_opponent != 0 {
-            let idx = remaining_opponent.trailing_zeros();
-            remaining_opponent &= remaining_opponent - 1;
-
+        for idx in utility::iter_bits(opponent_board) {
             let (piece_id, piece_color) = self.mailbox.get_piece(idx);
             let attacks = self
                 .bitboard
@@ -177,11 +173,7 @@ impl Chessboard {
         let mut allied_attacks: Vec<Move> = Vec::new();
         let mut allied_moves: Vec<Move> = Vec::new();
 
-        let mut remaining_allied = allied_board;
-        while remaining_allied != 0 {
-            let start_index = remaining_allied.trailing_zeros();
-            remaining_allied &= remaining_allied - 1;
-
+        for start_index in utility::iter_bits(allied_board) {
             let (piece_id, piece_color_id) = self.mailbox.get_piece(start_index);
 
             let mut piece_attacks = self.bitboard.generate_effective_attacks(

@@ -240,14 +240,22 @@ pub fn rook_mask(rook_index: u32) -> u64 {
 
 /// Returns all set-bit indices in ascending order.
 pub fn bit_scan(board: u64) -> Vec<u32> {
-    let mut indices = Vec::new();
+    iter_bits(board).collect()
+}
+
+/// Iterates over set-bit indices in ascending order.
+pub fn iter_bits(board: u64) -> impl Iterator<Item = u32> {
     let mut board = board;
-    while board != 0 {
-        let trailing_zeros = board.trailing_zeros();
-        indices.push(trailing_zeros);
-        board &= !(1 << trailing_zeros);
-    }
-    indices
+
+    std::iter::from_fn(move || {
+        if board == 0 {
+            return None;
+        }
+
+        let idx = board.trailing_zeros();
+        board &= board - 1;
+        Some(idx)
+    })
 }
 
 /// Returns a contiguous bit mask spanning two inclusive indices.
