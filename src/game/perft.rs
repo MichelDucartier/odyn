@@ -16,7 +16,7 @@ pub fn perft(board: &Chessboard, depth: u8) -> u64 {
         return 1;
     }
 
-    let legal_moves = board.legal_moves(board.current_turn());
+    let legal_moves = board.legal_moves_vec(board.current_turn());
     if depth == 1 {
         return legal_moves.len() as u64;
     }
@@ -38,7 +38,7 @@ pub fn perft_divide(board: &Chessboard, depth: u8) -> Vec<(Move, u64)> {
     }
 
     board
-        .legal_moves(board.current_turn())
+        .legal_moves_vec(board.current_turn())
         .into_iter()
         .map(|move_| {
             let mut next = board.clone();

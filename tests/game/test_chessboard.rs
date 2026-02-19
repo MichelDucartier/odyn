@@ -5,7 +5,7 @@ fn opponent_attacks(cboard: &chessboard::Chessboard, color_id: u8) -> u64 {
     let fen = cboard.to_fen(" ");
     let bboard = bitboard::Bitboard::from_fen(&fen, " ");
     let opponent_color = constants::opposite(color_id);
-    bboard.generate_pieces_attacks(opponent_color, constants::ALL_PIECES_ID.to_vec())
+    bboard.generate_pieces_attacks(opponent_color, &constants::ALL_PIECES_ID)
 }
 
 fn is_checkmate(cboard: &chessboard::Chessboard) -> bool {

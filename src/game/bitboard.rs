@@ -9,11 +9,11 @@ use super::{
     utility,
 };
 use crate::constants::{
-    self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX,
-    FILE_G_INDEX, FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_1_INDEX, RANK_3_INDEX,
-    RANK_4_INDEX, RANK_5_INDEX, RANK_6_INDEX, RANK_8_INDEX, ROOK_ID, WHITE_ID,
+    self, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX, FILE_G_INDEX,
+    FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_1_INDEX, RANK_3_INDEX, RANK_4_INDEX,
+    RANK_5_INDEX, RANK_6_INDEX, RANK_8_INDEX, ROOK_ID, WHITE_ID,
 };
-use std::{cmp, collections::HashMap};
+use std::collections::HashMap;
 
 /// Low-level bitboard representation of piece placement and game flags.
 #[derive(Debug, Default, Clone, Copy)]
@@ -560,7 +560,7 @@ impl Bitboard {
         self.is_attacked(allied_king, opponent_attacks)
     }
 
-    pub fn generate_pieces_attacks(&self, color_id: u8, piece_ids: Vec<u8>) -> u64 {
+    pub fn generate_pieces_attacks(&self, color_id: u8, piece_ids: &[u8]) -> u64 {
         let occupancy = self.white_board | self.black_board;
         self.generate_pieces_attacks_with_occupancy(color_id, piece_ids, occupancy)
     }
@@ -568,13 +568,14 @@ impl Bitboard {
     pub fn generate_pieces_attacks_with_occupancy(
         &self,
         color_id: u8,
-        piece_ids: Vec<u8>,
+        piece_ids: &[u8],
         occupancy: u64,
     ) -> u64 {
         let mut all_attacks = 0;
         let allied_board = self.get_color_board(color_id);
 
         for piece_id in piece_ids {
+            let piece_id = *piece_id;
             let piece_board = self.get_piece_board(piece_id).unwrap() & allied_board;
             let piece_attacks =
                 self.generate_attacks_with_occupancy(piece_id, color_id, piece_board, occupancy);

@@ -1,10 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt,
-    iter::Filter,
 };
-
-use ilog::IntLog;
 
 use super::{
     bitboard::Bitboard,
@@ -116,31 +113,38 @@ impl Chessboard {
         cboard
     }
 
-    /// Computes pseudo-legal moves for `color_id` (ignores king safety).
+    /// Computes legal moves for `color_id`.
     pub fn legal_moves(&self, color_id: u8) -> HashSet<chess_move::Move> {
+        self.legal_moves_vec(color_id).into_iter().collect()
+    }
+
+    /// Computes legal moves for `color_id` as a vector.
+    pub fn legal_moves_vec(&self, color_id: u8) -> Vec<chess_move::Move> {
         let opponent_color = constants::opposite(color_id);
         let allied_board = self.bitboard.get_color_board(color_id);
         let opponent_board = self.bitboard.get_color_board(opponent_color);
 
         let allied_king_board = self.bitboard.king_board & allied_board;
 
-        let king_index = allied_king_board.log2() as u32;
+        let king_index = allied_king_board.trailing_zeros();
 
         // Compute checkers with their indices + attacks
-        let checkers = utility::bit_scan(opponent_board)
-            .iter()
-            .filter_map(|idx| {
-                let (piece_id, piece_color) = self.mailbox.get_piece(*idx);
-                let attacks = self
-                    .bitboard
-                    .generate_attacks(piece_id, piece_color, 1_u64 << *idx);
-                if (attacks & allied_king_board) == 0 {
-                    return None;
-                }
+        let mut checkers = Vec::new();
+        let mut remaining_opponent = opponent_board;
+        while remaining_opponent != 0 {
+            let idx = remaining_opponent.trailing_zeros();
+            remaining_opponent &= remaining_opponent - 1;
 
-                Some((*idx, attacks))
-            })
-            .collect::<HashMap<u32, u64>>();
+            let (piece_id, piece_color) = self.mailbox.get_piece(idx);
+            let attacks = self
+                .bitboard
+                .generate_attacks(piece_id, piece_color, 1_u64 << idx);
+            if (attacks & allied_king_board) == 0 {
+                continue;
+            }
+
+            checkers.push((idx, attacks));
+        }
 
         // Compute pinned pieces
         let pinned_pieces = self.compute_pinned_pieces(color_id);
@@ -150,7 +154,7 @@ impl Chessboard {
             (self.bitboard.white_board | self.bitboard.black_board) & !allied_king_board;
         let ennemy_attacks = self.bitboard.generate_pieces_attacks_with_occupancy(
             opponent_color,
-            ALL_PIECES_ID.to_vec(),
+            &ALL_PIECES_ID,
             occupancy,
         );
 
@@ -170,74 +174,66 @@ impl Chessboard {
             return utility::unpack_moves(king_index, king_moves).collect();
         }
 
-        let allied_attacks: HashSet<Move> = utility::bit_scan(allied_board)
-            .iter()
-            .flat_map(|start_idx| {
-                let (piece_id, color_id) = self.mailbox.get_piece(*start_idx);
-                let mut piece_attacks = self.bitboard.generate_effective_attacks(
-                    piece_id,
-                    color_id,
-                    1_u64 << *start_idx,
-                );
-                // If the attacker is a king, need to check whether the potential captured piece
-                // will cause the king to be in check
-                if piece_id == KING_ID {
-                    piece_attacks = piece_attacks & !ennemy_attacks;
+        let mut allied_attacks: Vec<Move> = Vec::new();
+        let mut allied_moves: Vec<Move> = Vec::new();
+
+        let mut remaining_allied = allied_board;
+        while remaining_allied != 0 {
+            let start_index = remaining_allied.trailing_zeros();
+            remaining_allied &= remaining_allied - 1;
+
+            let (piece_id, piece_color_id) = self.mailbox.get_piece(start_index);
+
+            let mut piece_attacks = self.bitboard.generate_effective_attacks(
+                piece_id,
+                piece_color_id,
+                1_u64 << start_index,
+            );
+            if piece_id == KING_ID {
+                piece_attacks &= !ennemy_attacks;
+            }
+            if let Some(allow_mask) = pinned_pieces.get(&start_index) {
+                piece_attacks &= allow_mask;
+            }
+
+            for move_ in utility::unpack_moves(start_index, piece_attacks) {
+                self.append_promotion_moves(&mut allied_attacks, move_, piece_id, piece_color_id);
+            }
+
+            let mut allowed_moves =
+                self.bitboard
+                    .generate_moves(piece_id, piece_color_id, 1_u64 << start_index);
+            if piece_id == KING_ID {
+                allowed_moves &= !ennemy_attacks;
+            }
+            if let Some(allow_mask) = pinned_pieces.get(&start_index) {
+                allowed_moves &= allow_mask;
+            }
+
+            for move_ in utility::unpack_moves(start_index, allowed_moves) {
+                let (_start_row, start_col) = utility::index_to_square(move_.start_index);
+                let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+                if piece_id == KING_ID
+                    && end_col.abs_diff(start_col) > 1
+                    && self.bitboard.is_castle_in_check(move_, ennemy_attacks)
+                {
+                    continue;
                 }
 
-                if let Some(allow_mask) = pinned_pieces.get(start_idx) {
-                    // If pinned
-                    piece_attacks &= allow_mask;
-                }
-
-                utility::unpack_moves(*start_idx, piece_attacks)
-                    .flat_map(move |move_| self.maybe_promotion_moves(move_, piece_id, color_id))
-            })
-            .collect();
-
-        // We already generated the attacks, now we need to generate the moves
-        let allied_moves = utility::bit_scan(allied_board)
-            .iter()
-            .flat_map(|start_index| {
-                let (piece_id, color_id) = self.mailbox.get_piece(*start_index);
-
-                let mut allowed_moves =
-                    self.bitboard
-                        .generate_moves(piece_id, color_id, 1_u64 << start_index);
-
-                if piece_id == KING_ID {
-                    allowed_moves = allowed_moves & !ennemy_attacks;
-                }
-
-                // 2 choices: pinned or not pinned
-                if let Some(allow_mask) = pinned_pieces.get(start_index) {
-                    allowed_moves = allowed_moves & allow_mask;
-                }
-
-                utility::unpack_moves(*start_index, allowed_moves)
-                    .flat_map(move |move_| self.maybe_promotion_moves(move_, piece_id, color_id))
-                    .filter(move |move_| {
-                        let (_start_row, start_col) = utility::index_to_square(move_.start_index);
-                        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
-                        if piece_id != KING_ID || end_col.abs_diff(start_col) <= 1 {
-                            return true;
-                        }
-                        !self.bitboard.is_castle_in_check(*move_, ennemy_attacks)
-                    })
-            })
-            .collect();
+                self.append_promotion_moves(&mut allied_moves, move_, piece_id, piece_color_id);
+            }
+        }
 
         if checkers.len() >= 1 {
-            let (checker_idx, checker_attack) = checkers.iter().next().unwrap();
-            let moves = self.handle_single_check(
-                *checker_idx,
-                *checker_attack,
+            let (checker_idx, checker_attack) = checkers[0];
+            return self.handle_single_check(
+                checker_idx,
+                checker_attack,
                 king_index,
                 king_moves,
-                allied_attacks,
-                allied_moves,
+                &allied_attacks,
+                &allied_moves,
             );
-            return moves;
         }
 
         let mut allowed_moves = allied_moves;
@@ -246,9 +242,16 @@ impl Chessboard {
         allowed_moves
     }
 
-    fn maybe_promotion_moves(&self, move_: Move, piece_id: u8, color_id: u8) -> HashSet<Move> {
+    fn append_promotion_moves(
+        &self,
+        move_list: &mut Vec<Move>,
+        move_: Move,
+        piece_id: u8,
+        color_id: u8,
+    ) {
         if piece_id != PAWN_ID {
-            return HashSet::from([move_]);
+            move_list.push(move_);
+            return;
         }
 
         let (end_row, _end_col) = utility::index_to_square(move_.end_index);
@@ -257,19 +260,17 @@ impl Chessboard {
         if (end_row == RANK_8_INDEX && color_id == WHITE_ID)
             || (end_row == RANK_1_INDEX && color_id == BLACK_ID)
         {
-            let mut possible_moves = HashSet::new();
             for promotion_piece in POSSIBLE_PROMOTION {
-                possible_moves.insert(Move::new(
+                move_list.push(Move::new(
                     move_.start_index,
                     move_.end_index,
                     promotion_piece,
                 ));
             }
-
-            return possible_moves;
+            return;
         }
 
-        HashSet::from([move_])
+        move_list.push(move_);
     }
 
     fn handle_single_check(
@@ -278,26 +279,26 @@ impl Chessboard {
         checker_attack: u64,
         king_index: u32,
         king_moves: u64,
-        allied_attacks: HashSet<chess_move::Move>,
-        allied_moves: HashSet<chess_move::Move>,
-    ) -> HashSet<chess_move::Move> {
+        allied_attacks: &[chess_move::Move],
+        allied_moves: &[chess_move::Move],
+    ) -> Vec<chess_move::Move> {
         let (piece_id, _color_id) = self.mailbox.get_piece(checker_idx);
 
-        let capture_moves: HashSet<chess_move::Move> = allied_attacks
-            .iter()
-            .filter(|move_| move_.end_index == checker_idx)
-            .copied()
-            .collect();
-
         // King moves
-        let king_moves_set: HashSet<chess_move::Move> =
+        let mut legal: Vec<chess_move::Move> =
             utility::unpack_moves(king_index, king_moves).collect();
 
+        for move_ in allied_attacks
+            .iter()
+            .filter(|move_| move_.end_index == checker_idx)
+        {
+            legal.push(*move_);
+        }
+
         if NON_SLIDING_PIECES_ID.contains(&piece_id) {
-            // A single knight or pawn is checking the king
-            // Only moves available : capture or king moves
-            let mut legal = king_moves_set;
-            legal.extend(capture_moves);
+            // A single knight or pawn is checking the king.
+            legal.sort_unstable_by_key(|m| (m.start_index, m.end_index, m.promotion_piece));
+            legal.dedup();
             return legal;
         }
 
@@ -309,15 +310,15 @@ impl Chessboard {
         let ray_mask = Self::build_ray_mask(king_index, checker_idx);
         let block_squares = ray_mask & checker_attack & !checker_board & !king_board;
 
-        let block_moves: HashSet<Move> = allied_moves
+        for move_ in allied_moves
             .iter()
             .filter(|m| ((1u64 << m.end_index) & block_squares) != 0)
-            .copied()
-            .collect();
+        {
+            legal.push(*move_);
+        }
 
-        let mut legal = king_moves_set;
-        legal.extend(capture_moves);
-        legal.extend(block_moves);
+        legal.sort_unstable_by_key(|m| (m.start_index, m.end_index, m.promotion_piece));
+        legal.dedup();
         legal
     }
 
