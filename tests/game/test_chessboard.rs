@@ -239,6 +239,16 @@ fn test_castle_allowed_when_path_clear_black_long() {
 }
 
 #[test]
+fn test_castle_disallowed_when_rook_missing_even_if_right_present() {
+    let cboard = chessboard::Chessboard::from_fen("4k3/8/8/8/8/8/8/4K3 w K - 0 1", " ");
+
+    let legal_moves = cboard.legal_moves(cboard.current_turn());
+    let short_castle = chess_move::Move::new_no_promotion(60, 62);
+
+    assert!(!legal_moves.contains(&short_castle));
+}
+
+#[test]
 fn test_number_of_pseudo_legal_moves_start_pos() {
     let cboard = chessboard::Chessboard::from_fen(START_FEN, " ");
 

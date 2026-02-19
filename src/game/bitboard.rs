@@ -509,8 +509,9 @@ impl Bitboard {
             constants::ROOK_ID => generate_rook_moves(piece_board, occupancy),
             constants::QUEEN_ID => generate_queen_moves(piece_board, occupancy),
             constants::KING_ID => {
+                let allied_rooks = self.rook_board & self.get_color_board(color_id);
                 generate_king_moves(piece_board)
-                    | generate_king_castle(color_id, self.flags, occupancy)
+                    | generate_king_castle(color_id, self.flags, occupancy, allied_rooks)
             }
             constants::PAWN_ID => generate_pawn_moves(piece_board, occupancy, color_id),
             constants::EMPTY_ID => 0,

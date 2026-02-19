@@ -6,9 +6,11 @@ use crate::constants::BISHOP_ID;
 use crate::constants::B_FILE_MASK;
 use crate::constants::C_FILE_MASK;
 use crate::constants::D_FILE_MASK;
+use crate::constants::FILE_A_INDEX;
 use crate::constants::FILE_B_INDEX;
 use crate::constants::FILE_C_INDEX;
 use crate::constants::FILE_G_INDEX;
+use crate::constants::FILE_H_INDEX;
 use crate::constants::F_FILE_MASK;
 use crate::constants::G_FILE_MASK;
 use crate::constants::H_FILE_MASK;
@@ -51,34 +53,43 @@ pub fn generate_king_moves(king_board: u64) -> u64 {
     attacks
 }
 
-/// Generates castling destinations allowed by flags and empty-path checks.
-pub fn generate_king_castle(color: u8, flags: u8, occupancy: u64) -> u64 {
+/// Generates castling destinations allowed by flags, empty-path checks, and rook presence.
+pub fn generate_king_castle(color: u8, flags: u8, occupancy: u64, allied_rooks: u64) -> u64 {
     let king_castle;
     let queen_castle;
     let piece_offset;
+    let rank;
     let mut queen_side_occupancy = occupancy & (B_FILE_MASK | C_FILE_MASK | D_FILE_MASK);
     let mut king_side_occupancy = occupancy & (F_FILE_MASK | G_FILE_MASK);
 
     if color == constants::WHITE_ID {
         king_castle = (flags >> bitboard::WKCASTLE_F_INDEX) & 0b1;
         queen_castle = (flags >> bitboard::WQCASTLE_F_INDEX) & 0b1;
+        rank = RANK_1_INDEX;
         piece_offset = utility::square_to_index(RANK_1_INDEX, 0);
         king_side_occupancy = king_side_occupancy & RANK_1_MASK;
         queen_side_occupancy = queen_side_occupancy & RANK_1_MASK;
     } else {
         king_castle = (flags >> bitboard::BKCASTLE_F_INDEX) & 0b1;
         queen_castle = (flags >> bitboard::BQCASTLE_F_INDEX) & 0b1;
+        rank = RANK_8_INDEX;
         piece_offset = utility::square_to_index(RANK_8_INDEX, 0);
         king_side_occupancy = king_side_occupancy & RANK_8_MASK;
         queen_side_occupancy = queen_side_occupancy & RANK_8_MASK;
     }
 
+    let king_rook_index = utility::square_to_index(rank, FILE_H_INDEX);
+    let queen_rook_index = utility::square_to_index(rank, FILE_A_INDEX);
+
+    let king_rook_present = ((allied_rooks >> king_rook_index) & 1) as u8;
+    let queen_rook_present = ((allied_rooks >> queen_rook_index) & 1) as u8;
+
     let mut rank_castling_moves = 0;
     if king_side_occupancy == 0 {
-        rank_castling_moves |= king_castle << FILE_G_INDEX;
+        rank_castling_moves |= (king_castle & king_rook_present) << FILE_G_INDEX;
     }
     if queen_side_occupancy == 0 {
-        rank_castling_moves |= queen_castle << FILE_C_INDEX;
+        rank_castling_moves |= (queen_castle & queen_rook_present) << FILE_C_INDEX;
     }
 
     u64::from(rank_castling_moves) << piece_offset

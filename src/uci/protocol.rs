@@ -170,6 +170,11 @@ impl<T: ChessEngine> UciWrapper<T> {
     fn run_perft(&self, depth: u8, out: &mut dyn Write) -> Result<()> {
         let board = Chessboard::from_moves(&self.position.fen, self.position.moves.clone());
         let splits = perft::perft_divide(&board, depth);
+        let total_nodes: u64 = if depth == 0 {
+            1
+        } else {
+            splits.iter().map(|(_, nodes)| *nodes).sum()
+        };
 
         for (mv, nodes) in splits {
             writeln!(out, "{}: {}", mv.uci_move(), nodes)?;
@@ -179,7 +184,7 @@ impl<T: ChessEngine> UciWrapper<T> {
             writeln!(out)?;
         }
 
-        writeln!(out, "Nodes searched: {}", perft::perft(&board, depth))?;
+        writeln!(out, "Nodes searched: {}", total_nodes)?;
         Ok(())
     }
 }
