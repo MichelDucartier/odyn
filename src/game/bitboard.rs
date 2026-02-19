@@ -10,8 +10,8 @@ use super::{
 };
 use crate::constants::{
     self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_A_INDEX, FILE_D_INDEX, FILE_F_INDEX,
-    FILE_G_INDEX, FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_3_INDEX, RANK_4_INDEX,
-    RANK_5_INDEX, RANK_6_INDEX, ROOK_ID, WHITE_ID,
+    FILE_G_INDEX, FILE_H_INDEX, KING_ID, KNIGHT_ID, PAWN_ID, QUEEN_ID, RANK_1_INDEX, RANK_3_INDEX,
+    RANK_4_INDEX, RANK_5_INDEX, RANK_6_INDEX, RANK_8_INDEX, ROOK_ID, WHITE_ID,
 };
 use std::{cmp, collections::HashMap};
 
@@ -411,25 +411,25 @@ impl Bitboard {
         }
 
         // Update flags if the rook is moved
-        let (_start_row, start_col) = utility::index_to_square(move_.start_index);
+        let (start_row, start_col) = utility::index_to_square(move_.start_index);
 
-        match (color_id, start_col) {
-            (WHITE_ID, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
-            (WHITE_ID, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
-            (BLACK_ID, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
-            (BLACK_ID, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
+        match (color_id, start_row, start_col) {
+            (WHITE_ID, RANK_1_INDEX, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
+            (WHITE_ID, RANK_1_INDEX, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
+            (BLACK_ID, RANK_8_INDEX, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
+            (BLACK_ID, RANK_8_INDEX, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
             _ => (),
         }
 
         // Update flags if ennemy rook is taken
-        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+        let (end_row, end_col) = utility::index_to_square(move_.end_index);
         let opponent_id = constants::opposite(color_id);
 
-        match (opponent_id, end_col) {
-            (WHITE_ID, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
-            (WHITE_ID, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
-            (BLACK_ID, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
-            (BLACK_ID, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
+        match (opponent_id, end_row, end_col) {
+            (WHITE_ID, RANK_1_INDEX, FILE_A_INDEX) => self.flags &= !(1 << WQCASTLE_F_INDEX),
+            (WHITE_ID, RANK_1_INDEX, FILE_H_INDEX) => self.flags &= !(1 << WKCASTLE_F_INDEX),
+            (BLACK_ID, RANK_8_INDEX, FILE_A_INDEX) => self.flags &= !(1 << BQCASTLE_F_INDEX),
+            (BLACK_ID, RANK_8_INDEX, FILE_H_INDEX) => self.flags &= !(1 << BKCASTLE_F_INDEX),
             _ => (),
         }
     }

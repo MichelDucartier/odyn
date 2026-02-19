@@ -322,6 +322,6 @@ fn test_pawn_attacks_on_a_file() {
 
     assert_eq_bitboard!(
         expected_attacks,
-        move_generator::generate_pawn_attacks(pawn_board, color, 0)
+        move_generator::generate_pawn_attacks(pawn_board, color)
     )
 }

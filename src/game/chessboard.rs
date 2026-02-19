@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt,
+    iter::Filter,
 };
 
 use ilog::IntLog;
@@ -178,10 +179,6 @@ impl Chessboard {
                     color_id,
                     1_u64 << *start_idx,
                 );
-                // self.bitboard
-                //     .generate_attacks(piece_id, color_id, 1_u64 << *start_idx)
-                //     & opponent_board;
-
                 // If the attacker is a king, need to check whether the potential captured piece
                 // will cause the king to be in check
                 if piece_id == KING_ID {
@@ -219,6 +216,14 @@ impl Chessboard {
 
                 utility::unpack_moves(*start_index, allowed_moves)
                     .flat_map(move |move_| self.maybe_promotion_moves(move_, piece_id, color_id))
+                    .filter(move |move_| {
+                        let (_start_row, start_col) = utility::index_to_square(move_.start_index);
+                        let (_end_row, end_col) = utility::index_to_square(move_.end_index);
+                        if piece_id != KING_ID || end_col.abs_diff(start_col) <= 1 {
+                            return true;
+                        }
+                        !self.bitboard.is_castle_in_check(*move_, ennemy_attacks)
+                    })
             })
             .collect();
 
