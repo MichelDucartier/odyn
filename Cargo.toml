@@ -2,7 +2,7 @@
 name = "odyn"
 version = "0.1.0"
 edition = "2021"
-default-run = "odyn_uci"
+default-run = "odyn"
 
 [dev-dependencies]
 criterion = "0.5.1"
@@ -19,4 +19,5 @@ lazy_static = "1.5.0"
 rand = "0.8.5"
 rustyline = "17.0.2"
 smallvec = "1.13.2"
+tch = "0.23.0"
 wasm-bindgen = "0.2.92"
