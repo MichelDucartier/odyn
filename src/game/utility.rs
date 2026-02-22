@@ -1,7 +1,9 @@
 use std::cmp::{max, min};
 
+use tch::{Device, IndexOp, Kind, Tensor};
+
 use super::magic::{self, BISHOP_LOOKUP};
-use crate::constants::{self, A_FILE_MASK, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
+use crate::constants::{self, A_FILE_MASK, CHESSBOARD_SIZE, H_FILE_MASK, RANK_1_MASK, RANK_8_MASK};
 use crate::game::chess_move::Move;
 use crate::game::magic::ROOK_LOOKUP;
 
@@ -238,11 +240,6 @@ pub fn rook_mask(rook_index: u32) -> u64 {
     ROOK_LOOKUP.lookup[rook_index as usize][hash]
 }
 
-/// Returns all set-bit indices in ascending order.
-pub fn bit_scan(board: u64) -> Vec<u32> {
-    iter_bits(board).collect()
-}
-
 /// Iterates over set-bit indices in ascending order.
 pub fn iter_bits(board: u64) -> impl Iterator<Item = u32> {
     let mut board = board;
@@ -282,4 +279,20 @@ pub fn unpack_moves(start_index: u32, piece_moves: u64) -> impl Iterator<Item = 
         remaining_moves &= !(1_u64 << end_index);
         Some(Move::new_no_promotion(start_index, end_index))
     })
+}
+
+// Returns a tensor version of the bitboard in entry (8x8 tensor)
+pub fn bitboard_to_vec(bitboard: u64) -> Tensor {
+    bitboard_to_vec_with_kind_device(bitboard, Kind::Float, Device::Cpu)
+}
+
+pub fn bitboard_to_vec_with_kind_device(bitboard: u64, kind: Kind, device: Device) -> Tensor {
+    let repr = Tensor::zeros(&[CHESSBOARD_SIZE, CHESSBOARD_SIZE], (kind, device));
+
+    for activated_index in iter_bits(bitboard) {
+        let (row, col) = index_to_square(activated_index);
+        let _ = repr.i((row as i64, col as i64)).fill_(1.0);
+    }
+
+    repr
 }

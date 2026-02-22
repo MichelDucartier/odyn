@@ -3,25 +3,28 @@ use std::{
     fmt,
 };
 
+use tch::Tensor;
+
 use super::{
     bitboard::Bitboard,
     chess_move::{self, Move},
     mailbox::{self, MailboxBoard},
     utility,
 };
+use crate::{constants::NON_SLIDING_PIECES_ID, game::bitboard};
 use crate::{
     constants::{
-        self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, KING_ID, KNIGHT_ID, PAWN_ID,
-        POSSIBLE_PROMOTION, QUEEN_ID, RANK_1_INDEX, ROOK_ID, WHITE_ID,
+        self, ALL_PIECES_ID, BISHOP_ID, BLACK_ID, EMPTY_ID, FILE_C_INDEX, FILE_G_INDEX, KING_ID,
+        KNIGHT_ID, PAWN_ID, POSSIBLE_PROMOTION, QUEEN_ID, RANK_1_INDEX, RANK_3_INDEX, RANK_6_INDEX,
+        RANK_8_INDEX, ROOK_ID, WHITE_ID,
     },
-    game::move_generator::{
-        generate_bishop_moves, generate_king_moves, generate_rook_moves,
-        generate_xray_bishop_attacks, generate_xray_rook_attacks,
+    game::{
+        move_generator::{
+            generate_bishop_moves, generate_king_moves, generate_rook_moves,
+            generate_xray_bishop_attacks, generate_xray_rook_attacks,
+        },
+        utility::bitboard_to_vec,
     },
-};
-use crate::{
-    constants::{NON_SLIDING_PIECES_ID, RANK_8_INDEX},
-    game::bitboard,
 };
 
 /// High-level chess board composed of bitboard and mailbox representations.
@@ -153,13 +156,6 @@ impl Chessboard {
             &ALL_PIECES_ID,
             occupancy,
         );
-
-        // println!(
-        //     "Ennemy attacks\n{}",
-        //     utility::format_bitboard(ennemy_attacks)
-        // );
-
-        // println!("Pinned pieces\n{:?}", pinned_pieces);
 
         // King moves (keep only the moves that are not blocked by allied pieces + not attacked by
         // ennemies)
@@ -415,43 +411,60 @@ impl Chessboard {
         self.bitboard.current_turn()
     }
 
-    // Returns `true` when the side to move has no legal escape from check.
-    // pub fn is_checkmate(&self, opponent_attacks: u64) -> bool {
-    //     let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
-    //     self.is_in_check(current_color, opponent_attacks) && !self.exists_legal_moves(current_color)
-    // }
+    pub fn to_tensor(&self) -> Tensor {
+        let mut planes: Vec<Tensor> = [
+            self.bitboard.white_board & self.bitboard.pawn_board,
+            self.bitboard.white_board & self.bitboard.knight_board,
+            self.bitboard.white_board & self.bitboard.bishop_board,
+            self.bitboard.white_board & self.bitboard.rook_board,
+            self.bitboard.white_board & self.bitboard.queen_board,
+            self.bitboard.white_board & self.bitboard.king_board,
+            self.bitboard.black_board & self.bitboard.pawn_board,
+            self.bitboard.black_board & self.bitboard.knight_board,
+            self.bitboard.black_board & self.bitboard.bishop_board,
+            self.bitboard.black_board & self.bitboard.rook_board,
+            self.bitboard.black_board & self.bitboard.queen_board,
+            self.bitboard.black_board & self.bitboard.king_board,
+        ]
+        .iter()
+        .map(|bitboard| bitboard_to_vec(*bitboard))
+        .collect();
 
-    // Returns `true` when the side to move has no legal move and is not in check.
-    // pub fn is_stalemate(&self, opponent_attacks: u64) -> bool {
-    //     let current_color = (self.bitboard.flags >> bitboard::TURN_F_INDEX) & 0b1;
-    //     !self.is_in_check(current_color, opponent_attacks) && self.exists_legal_moves(current_color)
-    // }
+        let turn_plane = if self.current_turn() == WHITE_ID {
+            planes[0].ones_like()
+        } else {
+            planes[0].zeros_like()
+        };
+        planes.push(turn_plane);
 
-    // pub fn legal_moves(&self, current_color: u8) -> impl Iterator<Item = chess_move::Move> + '_ {
-    //     let opponent_id = constants::opposite(current_color);
-    //     let pseudo_legal_moves = self.legal_moves(current_color);
-    //     let opponent_attacks = self.bitboard.generate_all_attacks(opponent_id);
-    //
-    //     pseudo_legal_moves.filter(move |move_| {
-    //         let mut cboard_copy = self.clone();
-    //         let flags = cboard_copy.make_move_unchecked(*move_);
-    //
-    //         // The move that we look at is a castle move
-    //         if chess_move::get_castle_flag(flags)
-    //             && !self.bitboard.is_castle_in_check(*move_, opponent_attacks)
-    //         {
-    //             return true;
-    //         }
-    //
-    //         // Not a castle move
-    //         let new_opponent_attacks = cboard_copy.bitboard.generate_all_attacks(opponent_id);
-    //         if !cboard_copy.is_in_check(current_color, new_opponent_attacks) {
-    //             return true;
-    //         }
-    //
-    //         false
-    //     })
-    // }
+        let mut state_board = 0_u64;
+
+        if ((self.bitboard.flags >> bitboard::WKCASTLE_F_INDEX) & 1) != 0 {
+            state_board |= 1_u64 << utility::square_to_index(RANK_1_INDEX, FILE_G_INDEX);
+        }
+        if ((self.bitboard.flags >> bitboard::WQCASTLE_F_INDEX) & 1) != 0 {
+            state_board |= 1_u64 << utility::square_to_index(RANK_1_INDEX, FILE_C_INDEX);
+        }
+        if ((self.bitboard.flags >> bitboard::BKCASTLE_F_INDEX) & 1) != 0 {
+            state_board |= 1_u64 << utility::square_to_index(RANK_8_INDEX, FILE_G_INDEX);
+        }
+        if ((self.bitboard.flags >> bitboard::BQCASTLE_F_INDEX) & 1) != 0 {
+            state_board |= 1_u64 << utility::square_to_index(RANK_8_INDEX, FILE_C_INDEX);
+        }
+
+        if self.bitboard.en_passant != 0 {
+            let en_passant_col = self.bitboard.en_passant.trailing_zeros();
+            let en_passant_row = if self.current_turn() == WHITE_ID {
+                RANK_6_INDEX
+            } else {
+                RANK_3_INDEX
+            };
+            state_board |= 1_u64 << utility::square_to_index(en_passant_row, en_passant_col);
+        }
+
+        planes.push(bitboard_to_vec(state_board));
+        Tensor::stack(&planes, 0)
+    }
 }
 
 /// Returns the character representing a piece given its piece_id and color_id.
@@ -517,6 +530,7 @@ pub fn format_chessboard(chessboard: &Chessboard) -> String {
 
 #[cfg(test)]
 mod tests {
+    use tch::Device;
 
     #[test]
     fn test_display_start_position() {
@@ -542,5 +556,15 @@ mod tests {
 
         // Verify empty squares
         assert!(display.contains('.'));
+    }
+
+    #[test]
+    fn test_to_tensor_defaults_to_cpu() {
+        use crate::constants::START_FEN;
+
+        let board = super::Chessboard::from_fen(START_FEN, " ");
+        let tensor = board.to_tensor();
+
+        assert_eq!(tensor.device(), Device::Cpu);
     }
 }

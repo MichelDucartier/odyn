@@ -6,6 +6,8 @@ pub const WHITE_ID: u8 = 1;
 /// Internal color id for black pieces.
 pub const BLACK_ID: u8 = 0;
 
+pub const CHESSBOARD_SIZE: i64 = 8;
+
 /// Piece identifiers used throughout move generation and board state.
 pub const EMPTY_ID: u8 = 0;
 pub const PAWN_ID: u8 = 1;
