@@ -81,6 +81,9 @@ pub const UCI_OK: &str = "uciok";
 /// Simplistic piece values used by the default evaluator.
 pub const PIECE_VALUES: [f32; 7] = [0.0, 1.0, 3.0, 3.0, 5.0, 9.0, f32::INFINITY];
 
+/// Number of possible moves encoded as (from_square, to_square) = 64 * 64.
+pub const NUM_MOVES: i64 = 64 * 64;
+
 /// Returns the opposite color id.
 pub fn opposite(color_id: u8) -> u8 {
     match color_id {

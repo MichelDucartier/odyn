@@ -1,9 +1,8 @@
 use tch::{nn, nn::Module, Tensor};
 
-use super::repr::mlp_block;
+use crate::constants::NUM_MOVES;
 
-/// Number of possible moves encoded as (from_square, to_square) = 64 * 64.
-const NUM_MOVES: i64 = 64 * 64;
+use super::blocks::mlp_block;
 
 /// Prediction network for MuZero.
 ///
@@ -96,10 +95,11 @@ impl PredictionNet {
 mod tests {
     use super::*;
     use crate::{
-        constants::START_FEN, engine::implementations::repr::embed_chessboard,
+        constants::{NUM_MOVES, START_FEN},
+        engine::implementations::repr::RepresentationNet,
         game::chessboard::Chessboard,
     };
-    use tch::{nn, nn::Module, Kind};
+    use tch::{nn, Kind};
 
     #[test]
     fn test_prediction_net_output_shapes() {
@@ -133,7 +133,7 @@ mod tests {
         let vs = nn::VarStore::new(input.device());
 
         // Representation network
-        let repr_net = embed_chessboard(vs.root() / "repr", 32, output_dim, 3);
+        let repr_net = RepresentationNet::new(vs.root() / "repr", 32, output_dim, 3);
         let state = repr_net.forward(&input); // shape: [output_dim]
         assert_eq!(state.size(), vec![output_dim]);
 
